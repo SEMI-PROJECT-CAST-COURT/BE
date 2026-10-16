@@ -1,5 +1,6 @@
 package com.verdict.castcourt.global.response;
 
+import com.verdict.castcourt.global.exception.ErrorCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,5 +15,9 @@ public class ErrorResponse {
         this.statusCode = statusCode;
         this.businessCode = businessCode;
         this.message = message;
+    }
+
+    public static ErrorResponse of(ErrorCode errorCode) {
+        return new ErrorResponse(errorCode.getStatus().value(), errorCode.getCode(), errorCode.getMessage());
     }
 }
