@@ -38,3 +38,6 @@ out/
 
 ### SQL ###
 sql/
+
+### Images ###
+uploads/
