@@ -1,3 +1,51 @@
 spring:
   application:
     name: cast-court
+
+  # Database 연결 설정
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: ${DB_DRIVER}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  # JPA 설정
+  jpa:
+    generate-ddl: false          # 엔티티 바탕으로 테이블 자동 생성, 수정 등 하는 기능 끄기
+    database: mysql              # 사용 데이터 베이스 mysql
+    properties:
+      hibernate:
+        format_sql: true         # sql문을 들여쓰기 줄바꿈 등을하여 볼 수 있게
+        highlight_sql: true      # sql문에 색상을 넣어 표시
+        use_sql_comments: true   # 생성한 SQL에 어떤 작업에서 나온 SQL인지 파악하는 데 도움이 되는 주석 추가
+
+  # jackson config
+  # JSON에 없거나 null인 값을 int 같은 기본형에 넣을 때 오류 대신 0으로 처리한다.
+  jackson:
+    deserialization:
+      fail-on-null-for-primitives: false
+
+  # paging config
+  # 요청의 page 파라미터를 1부터 세는 값으로 해석한다.
+  data:
+    web:
+      pageable:
+        one-indexed-parameters: true
+
+# logging config
+logging:
+  level:
+    # 실행되는 SQL 출력
+    org.hibernate.SQL: debug
+    # 바인딩되는 파라미터 출력
+    org.hibernate.orm.jdbc.bind: trace
+
+# server config
+server:
+  port: 8080
+
+# springdoc config
+springdoc:
+  swagger-ui:
+    # API를 컨트롤러 순서가 아닌 태그(도메인) 이름순으로 정렬한다.
+    tags-sorter: alpha
