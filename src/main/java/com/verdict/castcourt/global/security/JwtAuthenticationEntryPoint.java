@@ -26,15 +26,14 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
             HttpServletResponse response,
             AuthenticationException authException
     ) throws IOException {
-        ErrorResponse errorResponse = new ErrorResponse(
-                ErrorCode.AUTHENTICATION_REQUIRED.getStatus().value(),
-                ErrorCode.AUTHENTICATION_REQUIRED.getCode(),
-                ErrorCode.AUTHENTICATION_REQUIRED.getMessage()
-        );
+        Object jwtError = request.getAttribute(JwtAuthenticationFilter.JWT_ERROR_ATTRIBUTE);
+        ErrorCode errorCode = (jwtError instanceof ErrorCode code)
+                ? code
+                : ErrorCode.AUTHENTICATION_REQUIRED;
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+        response.getWriter().write(objectMapper.writeValueAsString(ErrorResponse.of(errorCode)));
     }
 }
