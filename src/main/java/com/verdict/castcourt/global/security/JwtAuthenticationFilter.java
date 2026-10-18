@@ -1,5 +1,6 @@
 package com.verdict.castcourt.global.security;
 
+import com.verdict.castcourt.global.exception.ErrorCode;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -34,7 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (authorization != null || authorization.startsWith(BEARER_PREFIX)) {
+        if (authorization != null && authorization.startsWith(BEARER_PREFIX)) {
             String token = authorization.substring(BEARER_PREFIX.length());
 
             try {
@@ -46,9 +47,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 context.setAuthentication(authentication);
                 SecurityContextHolder.setContext(context);
             } catch (ExpiredJwtException e) {
-                request.setAttribute(JWT_ERROR_ATTRIBUTE, "토큰이 만료되었습니다. 다시 로그인해주세요.");
+                request.setAttribute(JWT_ERROR_ATTRIBUTE, ErrorCode.AUTH_TOKEN_EXPIRED);
             } catch (JwtException | IllegalArgumentException e) {
-                request.setAttribute(JWT_ERROR_ATTRIBUTE, "유효하지 않은 토큰입니다.");
+                request.setAttribute(JWT_ERROR_ATTRIBUTE, ErrorCode.AUTH_TOKEN_INVALID);
             }
         }
 
