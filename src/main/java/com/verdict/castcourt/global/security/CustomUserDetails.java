@@ -8,21 +8,21 @@ import java.util.Collection;
 import java.util.List;
 
 public class CustomUserDetails implements UserDetails {
-    private int id;
-    private String username;
-    private String password;
-    private String authorities;
+    private final int id;
+    private final String username;
+    private final String password;
+    private final String authority;
 
-    public CustomUserDetails(int id, String username, String password, String authorities) {
+    public CustomUserDetails(int id, String username, String password, String authority) {
         this.id = id;
         this.username = username;
         this.password = password;
-        this.authorities = authorities;
+        this.authority = authority;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(authorities));
+        return List.of(new SimpleGrantedAuthority(authority));
     }
 
     @Override
@@ -37,5 +37,9 @@ public class CustomUserDetails implements UserDetails {
 
     public int getId() {
         return id;
+    }
+
+    public String getAuthority() {
+        return authority;
     }
 }
