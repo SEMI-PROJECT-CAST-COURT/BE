@@ -35,6 +35,7 @@ public class AccountService {
         return value == null || value.isBlank();
     }
 
+    // 로그인
     @Transactional(readOnly = true)
     public LoginResponseDTO login(LoginRequestDTO loginRequestDto) {
         if (isBlank(loginRequestDto.getUsername()) || isBlank(loginRequestDto.getPassword())) {
@@ -54,12 +55,15 @@ public class AccountService {
         return new LoginResponseDTO(token, account.getNickname(), account.getAuthority());
     }
 
+    // 유저 계정 생성
     @Transactional
     public void userSignup(SignupDTO dto)  { createAccount(dto, "USER"); }
 
+    // 어드민 계정 생성
     @Transactional
     public void adminSignup(SignupDTO dto) { createAccount(dto, "ADMIN"); }
 
+    // 계정 생성 메서드
     private void createAccount(SignupDTO dto, String authority) {
         if (isBlank(dto.getUsername()) || isBlank(dto.getPassword()) || isBlank(dto.getNickname())) {
             throw new BusinessException(ErrorCode.SIGNUP_INPUT_INVALID);
