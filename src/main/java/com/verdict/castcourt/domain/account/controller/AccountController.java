@@ -10,9 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class AccountController {
@@ -56,5 +54,17 @@ public class AccountController {
         accountService.adminSignup(signupDTO);
 
         return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), "회원가입 성공"));
+    }
+
+    @Operation(summary = "관리자 계정 비활성화",
+            description = "관리자 계정을 비활성화합니다. 슈퍼어드민 권한이 있는 사용자만 비활성화 할 수 있습니다.")
+    @SecurityRequirement(name = "bearerAuth")
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<SingleResponse<String>> deleteAccount(
+            @PathVariable int id
+    ) {
+        accountService.deleteAccount(id);
+
+        return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), "계정 비활성화 성공"));
     }
 }
