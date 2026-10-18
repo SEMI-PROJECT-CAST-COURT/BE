@@ -1,10 +1,12 @@
 package com.verdict.castcourt.domain.account.controller;
 
+import com.verdict.castcourt.domain.account.dto.SignupDTO;
 import com.verdict.castcourt.domain.account.dto.LoginRequestDTO;
 import com.verdict.castcourt.domain.account.dto.LoginResponseDTO;
 import com.verdict.castcourt.domain.account.service.AccountService;
 import com.verdict.castcourt.global.response.SingleResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,5 +33,28 @@ public class AccountController {
         LoginResponseDTO loginResponseDto = accountService.login(loginRequestDTO);
 
         return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), loginResponseDto));
+    }
+
+    @Operation(summary = "유저 회원가입",
+            description = "일반 회원 계정을 생성합니다. 로그인 없이 요청할 수 있습니다.")
+    @PostMapping("/signup/user")
+    public ResponseEntity<SingleResponse<String>> userSignup(
+            @RequestBody SignupDTO signupDTO
+    ) {
+        accountService.userSignup(signupDTO);
+
+        return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), "회원가입 성공"));
+    }
+
+    @Operation(summary = "관리자 계정 생성",
+            description = "관리자 계정을 생성합니다. 슈퍼어드민 권한이 있는 사용자만 생성할 수 있습니다.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/signup/admin")
+    public ResponseEntity<SingleResponse<String>> adminSignup(
+            @RequestBody SignupDTO signupDTO
+    ) {
+        accountService.adminSignup(signupDTO);
+
+        return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), "회원가입 성공"));
     }
 }
