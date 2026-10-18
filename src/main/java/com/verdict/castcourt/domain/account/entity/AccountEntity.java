@@ -23,7 +23,7 @@ public class AccountEntity {
     private String authority;
 
     @Column(name = "is_usage")
-    private boolean isUsage;
+    private boolean isUsage = true;
 
     public AccountEntity() {}
 
