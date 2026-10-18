@@ -82,4 +82,14 @@ public class AccountService {
 
         accountRepository.save(account);
     }
+
+    // 관리자 계정 삭제
+    @Transactional
+    public void deleteAccount(int id) {
+        AccountEntity account = accountRepository
+                                    .findById(id)
+                                    .orElseThrow(() -> new BusinessException(ErrorCode.ADMIN_NOT_FOUND));
+
+        account.setUsage(false);
+    }
 }
