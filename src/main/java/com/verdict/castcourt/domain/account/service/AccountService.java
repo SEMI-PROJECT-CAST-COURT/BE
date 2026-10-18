@@ -1,5 +1,6 @@
 package com.verdict.castcourt.domain.account.service;
 
+import com.verdict.castcourt.domain.account.dto.SignupDTO;
 import com.verdict.castcourt.domain.account.dto.LoginRequestDTO;
 import com.verdict.castcourt.domain.account.dto.LoginResponseDTO;
 import com.verdict.castcourt.domain.account.entity.AccountEntity;
@@ -51,5 +52,30 @@ public class AccountService {
         String token = jwtTokenProvider.createToken(user);
 
         return new LoginResponseDTO(token, account.getNickname(), account.getAuthority());
+    }
+
+    @Transactional
+    public void userSignup(SignupDTO dto)  { createAccount(dto, "USER"); }
+
+    @Transactional
+    public void adminSignup(SignupDTO dto) { createAccount(dto, "ADMIN"); }
+
+    private void createAccount(SignupDTO dto, String authority) {
+        if (isBlank(dto.getUsername()) || isBlank(dto.getPassword()) || isBlank(dto.getNickname())) {
+            throw new BusinessException(ErrorCode.SIGNUP_INPUT_INVALID);
+        }
+
+        String username = dto.getUsername().trim();
+        if (accountRepository.existsByUsername(username)) {
+            throw new BusinessException(ErrorCode.USERNAME_ALREADY_EXISTS);
+        }
+
+        AccountEntity account = new AccountEntity();
+        account.setUsername(username);
+        account.setPassword(passwordEncoder.encode(dto.getPassword()));   // trim 안 함
+        account.setNickname(dto.getNickname().trim());
+        account.setAuthority(authority);
+
+        accountRepository.save(account);
     }
 }
