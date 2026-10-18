@@ -2,14 +2,12 @@ package com.verdict.castcourt.global.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.util.Date;
 
 @Component
@@ -19,9 +17,9 @@ public class JwtTokenProvider {
 
     public JwtTokenProvider(
         @Value("${jwt.secret}") String secretKey,
-        @Value("${jwt.expiration}") long accessTokenExpiration
+        @Value("${jwt.access-token-expiration}") long accessTokenExpiration
     ) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64URL.decode(secretKey));
+        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
         this.accessTokenExpiration = accessTokenExpiration;
     }
 
@@ -32,7 +30,7 @@ public class JwtTokenProvider {
                 .header().type("JWT").and()
                 .subject(String.valueOf(user.getId()))
                 .claim("username", user.getUsername())
-                .claim("authorities", user.getAuthorities())
+                .claim("authority", user.getAuthority())
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + accessTokenExpiration))
                 .signWith(secretKey)
@@ -50,7 +48,7 @@ public class JwtTokenProvider {
                 Integer.parseInt(claims.getSubject()),
                 claims.get("username", String.class),
                 null,
-                claims.get("authorities", String.class)
+                claims.get("authority", String.class)
         );
     }
 }
