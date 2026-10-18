@@ -4,8 +4,7 @@ import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -38,15 +37,17 @@ public class SecurityConfig {
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .csrf(AbstractHttpConfigurer::disable)
+            .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth ->
                 auth.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                     .requestMatchers("/error").permitAll()
                     .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                     .requestMatchers("/actuator/health").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                     // account
                     .requestMatchers(HttpMethod.POST, "/login").permitAll()
                     .requestMatchers(HttpMethod.POST, "/signup/user").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/signup/admin").hasRole("SUPER_ADMIN")
+                    .requestMatchers(HttpMethod.POST, "/signup/admin").hasAuthority("SUPER_ADMIN")
                     .anyRequest().authenticated()
             )
             .exceptionHandling(exception ->
@@ -64,10 +65,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
-        return configuration.getAuthenticationManager();
     }
 }
