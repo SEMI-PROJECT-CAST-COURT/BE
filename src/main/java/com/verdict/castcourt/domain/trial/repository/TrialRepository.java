@@ -1,13 +1,13 @@
 package com.verdict.castcourt.domain.trial.repository;
 
-import com.verdict.castcourt.domain.trial.entity.Trial;
+import com.verdict.castcourt.domain.trial.entity.TrialEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface TrialRepository extends JpaRepository<Trial, Integer> {
+public interface TrialRepository extends JpaRepository<TrialEntity, Integer> {
 
     /* 내 재판 목록 (trialId 내림차순 · cursor 보다 작은 id 부터 size 개)
      *  - 필터 값이 null 이면 그 조건은 건너뛴다

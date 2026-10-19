@@ -22,7 +22,7 @@ import java.util.List;
 @Table(name = "trial")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Trial {
+public class TrialEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
