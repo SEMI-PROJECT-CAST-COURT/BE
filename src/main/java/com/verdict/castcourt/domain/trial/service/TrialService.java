@@ -190,4 +190,26 @@ public class TrialService {
 
         return TrialStatusResponseDTO.from(session);
     }
+
+    /* 판결 전 검사 : 404 → 403 → 최후 변론까지 끝났는지(400) → 이미 기록이 있는 역할인지(409)
+     *  409 는 AI 를 부르기 전에 검사해서 저장하지 못할 총평에 비용을 쓰지 않는다.
+     * */
+    TrialSession checkVerdictable(int userId, String trialId) {
+
+        TrialSession session = trialSessionStore.findByTrialId(trialId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRIAL_NOT_FOUND));
+
+        if (session.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TRIAL_ACCESS_DENIED);
+        }
+
+        if (!session.isFinished()) {
+            throw new BusinessException(ErrorCode.VERDICT_STAGE_INVALID);
+        }
+
+        if (trialRepository.existsByUserIdAndWorkCaseIdAndRole(userId, session.getWorkCaseId(), session.getRole())) {
+            throw new BusinessException(ErrorCode.ROLE_ALREADY_RECORDED);
+        }
+        return session;
+    }
 }
