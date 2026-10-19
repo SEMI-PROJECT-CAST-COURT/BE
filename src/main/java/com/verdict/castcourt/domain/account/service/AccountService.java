@@ -68,7 +68,7 @@ public class AccountService {
     public void adminSignup(SignupDTO dto) { createAccount(dto, "ADMIN"); }
 
     // 계정 생성 메서드
-    private void createAccount(SignupDTO dto, String authority) {
+     void createAccount(SignupDTO dto, String authority) {
         if (isBlank(dto.getUsername()) || isBlank(dto.getPassword()) || isBlank(dto.getNickname())) {
             throw new BusinessException(ErrorCode.SIGNUP_INPUT_INVALID);
         }
@@ -87,7 +87,8 @@ public class AccountService {
         accountRepository.save(account);
     }
 
-    // 관리자 계정 조회
+    // 관리자 계정 전체 조회
+    @Transactional(readOnly = true)
     public List<AccountDTO> findAllAdminAccounts() {
          List<AccountEntity> accounts = accountRepository.findAll(Sort.by("id"));
 
