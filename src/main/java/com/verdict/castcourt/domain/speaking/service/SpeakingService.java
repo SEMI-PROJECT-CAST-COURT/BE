@@ -99,6 +99,15 @@ public class SpeakingService {
         return emitter;
     }
 
+    /* 변호인으로 시작하면 첫 발언(검사 모두 진술)이 AI 차례다 → 재판 시작 때 만들어 기록한다 (TrialService 가 부른다)
+     *  재판 시작 응답은 SSE 가 아니라서 글자 조각은 버리고 다 만든 문장만 쓴다.
+     * */
+    public void playAiOpening(TrialSession session) {
+        String content = speakOpponent(session, delta -> {
+        });
+        judgeAndRecord(session, content);
+    }
+
     /* SSE 를 열기 전 검사 : 404 → 403 → 내 차례 → 글자 수 */
     TrialSession checkSubmittable(int userId, String trialId, String content) {
 

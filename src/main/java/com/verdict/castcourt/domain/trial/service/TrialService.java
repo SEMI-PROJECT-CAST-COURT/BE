@@ -1,6 +1,13 @@
 package com.verdict.castcourt.domain.trial.service;
 
-import com.verdict.castcourt.domain.trial.dto.*;
+import com.verdict.castcourt.domain.trial.dto.TrialStatusResponseDTO;
+import com.verdict.castcourt.domain.speaking.entity.Speaker;
+import com.verdict.castcourt.domain.speaking.service.SpeakingService;
+import com.verdict.castcourt.domain.trial.dto.MyTrialDTO;
+import com.verdict.castcourt.domain.trial.dto.MyTrialListDTO;
+import com.verdict.castcourt.domain.trial.dto.TrialOutcome;
+import com.verdict.castcourt.domain.trial.dto.TrialStartRequestDTO;
+import com.verdict.castcourt.domain.trial.dto.TrialStartResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
@@ -30,18 +37,23 @@ public class TrialService {
     private final TrialRepository trialRepository;
     private final TrialCaseReader trialCaseReader;
     private final TrialSessionStore trialSessionStore;
+    private final SpeakingService speakingService;     // 변호인 시작 때 AI 검사 모두 진술 (6-6)
 
     @Autowired
     public TrialService(TrialRepository trialRepository,
                         TrialCaseReader trialCaseReader,
-                        TrialSessionStore trialSessionStore) {
+                        TrialSessionStore trialSessionStore,
+                        SpeakingService speakingService) {
         this.trialRepository = trialRepository;
         this.trialCaseReader = trialCaseReader;
         this.trialSessionStore = trialSessionStore;
+        this.speakingService = speakingService;
     }
 
-    // 재판 시작 (TRL-01) : 검사 → 스냅샷 · 카드 추첨 → 메모리에 저장 (DB 저장 없음)
-    @Transactional(readOnly = true)
+    /* 재판 시작 (TRL-01) : 검사 → 스냅샷 · 카드 추첨 → (변호인이면 AI 검사 모두 진술) → 메모리에 저장 (DB 저장 없음)
+     *  @Transactional 을 붙이지 않는다. AI 호출(몇 초)을 하는 동안 DB 연결을 붙잡고 있지 않게 하려고.
+     *  리포지토리 메서드는 각자 짧은 트랜잭션으로 실행된다.
+     * */
     public TrialStartResponseDTO startTrial(int userId, TrialStartRequestDTO request) {
 
         Side role = parseRequired(Side.class, request.role(), ErrorCode.TRIAL_ROLE_INVALID);
@@ -67,6 +79,12 @@ public class TrialService {
                 snapshot,
                 drawCards(snapshot)
         );
+
+        // 변호인이면 첫 차례가 AI 검사다. 저장 전에 만들어서, AI 가 실패하면 판이 생기지 않게 한다 (502 · 503 · 504 JSON 응답)
+        if (session.currentTurn().speaker() == Speaker.AI) {
+            speakingService.playAiOpening(session);
+        }
+
         trialSessionStore.save(session);    // 같은 사용자의 이전 판은 덮어쓴다
 
         return TrialStartResponseDTO.from(session);

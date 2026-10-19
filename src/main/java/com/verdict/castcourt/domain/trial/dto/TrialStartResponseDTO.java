@@ -3,6 +3,7 @@ package com.verdict.castcourt.domain.trial.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.verdict.castcourt.domain.speaking.entity.Stage;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
+import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.rule.VisibilityRule;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
@@ -16,7 +17,7 @@ public record TrialStartResponseDTO(
         Stage stage,                    // 첫 단계 (OPENING)
         List<CardResponse> cards,       // CHICKEN : 내 쪽 근거 카드
         String progress,                // CHALLENGER : 사건 경과
-        String openingSpeaking          // DEFENSE : AI 검사 모두 진술 (6장에서 채운다)
+        String openingSpeaking          // DEFENSE : AI 검사 모두 진술
 ) {
 
     /* 근거 카드 한 장 */
@@ -42,7 +43,15 @@ public record TrialStartResponseDTO(
                 session.currentTurn().stage(),
                 cards,
                 progress,
-                null
+                openingSpeaking(session)
         );
+    }
+
+    // 변호인이면 시작 때 AI 가 한 첫 발언(검사 모두 진술) · 검사면 null
+    private static String openingSpeaking(TrialSession session) {
+        if (session.getRole() != Side.DEFENSE || session.getSpeakings().isEmpty()) {
+            return null;
+        }
+        return session.getSpeakings().get(0).content();
     }
 }
