@@ -1,5 +1,6 @@
 package com.verdict.castcourt.domain.workcase.service;
 
+import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseCreateRequestDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.*;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.*;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO.*;
@@ -11,6 +12,7 @@ import com.verdict.castcourt.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseDetailResponseDTO.*;
 
 import java.util.List;
 
@@ -52,21 +54,26 @@ public class WorkCaseService {
                 cases
         );
     }
-    
+
     /* 사건 불러오기 - 사건 수정 화면에서 사용 */
     @Transactional(readOnly = true)
     public WorkCaseDetailResponseDTO getWorkCase(int caseId) {
-        
-        // TODO: 권한 체크
-        
+
+
+        // 사건 조회
         WorkCaseEntity workCase = workCaseRepository.findById(caseId)
                 .filter(WorkCaseEntity::isUsage)      // 삭제된 사건 제외
                 .orElseThrow(() -> new BusinessException(ErrorCode.CASE_NOT_FOUND));
 
+        // 해당 사건의 근거 카드 조회
+        List<CardResponse> cards = toCardResponse(workCaseRepository.findCardsByCaseId(caseId));
+
         return WorkCaseDetailResponseDTO.of(
                 workCase,
-                null,
-                null
+                cards,
+                workCaseRepository.findPenaltiesByCaseId(caseId).stream()
+                        .map(row -> new PenaltyResponse(row.getTier(), row.getSentence()))
+                        .toList()   // 해당 사건의 패널티 목록 조회
         );
     }
 
@@ -96,18 +103,48 @@ public class WorkCaseService {
                 null
         );
     }
-    
+
+    /* 사건 등록 */
+    public int saveWorkCase(WorkCaseCreateRequestDTO requestDTO) {
+        
+        // TODO: 작품 존재 여부 체크
+
+        // TODO: 입력값 검증
+
+        WorkCaseEntity workCase = dtoToEntity(requestDTO);
+
+        WorkCaseEntity savedWorkCase = workCaseRepository.save(workCase);
+
+        // TODO: 근거 카드 등록
+        // TODO: 형벌표 등록
+
+        return savedWorkCase.getId();
+    }
+
     // 프로젝션 -> 응답용 CardResponse 변환
     // TODO: EvidenceCard 엔티티 생성 후, 엔티티 기반 변환으로 교체
-    private List<WorkCaseDetailResponseDTO.CardResponse> toCardResponse(List<WorkCaseCardRow> rows) {
+    private List<CardResponse> toCardResponse(List<WorkCaseCardRow> rows) {
 
         return rows.stream()
-                .map(row -> new WorkCaseDetailResponseDTO.CardResponse(
-                        WorkCaseDetailResponseDTO.Side.valueOf(row.getSide()),
+                .map(row -> new CardResponse(
+                        Side.valueOf(row.getSide()),
                         row.getTitle(),
                         row.getBody(),
                         row.getWeight()
                 ))
                 .toList();
+    }
+
+    private WorkCaseEntity dtoToEntity(WorkCaseCreateRequestDTO requestDTO) {
+
+        return new WorkCaseEntity(
+                requestDTO.workId(),
+                requestDTO.question(),
+                requestDTO.suspect(),
+                requestDTO.victim(),
+                requestDTO.summary(),
+                requestDTO.progress(),
+                true
+        );
     }
 }
