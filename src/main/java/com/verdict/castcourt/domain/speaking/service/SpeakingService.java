@@ -25,6 +25,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -64,17 +65,37 @@ public class SpeakingService {
         this.taskExecutor = taskExecutor;
     }
 
-    /* 발언 제출 : 검사 → 작업 스레드에 턴 처리를 맡기고 응답 통로를 돌려준다 */
+    /* 발언 제출 : 검사 → 처리 중 표시 → 작업 스레드에 턴 처리를 맡기고 응답 통로를 돌려준다 */
     public SseEmitter submit(int userId, String trialId, SpeakingRequestDTO request) {
 
         String content = request == null ? null : request.content();
         TrialSession session = checkSubmittable(userId, trialId, content);
 
+        // 같은 재판에 발언이 동시에 두 번 들어오면 두 번째는 막는다 (처리 중에는 내 차례가 아닌 것으로 본다)
+        if (!session.tryStartTurn()) {
+            throw new BusinessException(ErrorCode.SPEAKING_NOT_YOUR_TURN);
+        }
+
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
-        taskExecutor.execute(() -> {
-            runTurn(session, content, (event, data) -> send(emitter, event, data));
-            emitter.complete();     // 응답 끝
-        });
+
+        // 브라우저가 끊었는지 기억하는 깃발 (여러 스레드가 함께 봐서 AtomicBoolean)
+        AtomicBoolean closed = new AtomicBoolean(false);
+        emitter.onCompletion(() -> closed.set(true));
+        emitter.onTimeout(() -> closed.set(true));
+        emitter.onError(e -> closed.set(true));
+
+        try {
+            taskExecutor.execute(() -> {
+                runTurn(session, content, (event, data) -> send(emitter, closed, event, data));
+                if (!closed.get()) {
+                    emitter.complete();     // 응답 끝 (브라우저가 이미 끊었으면 닫을 것이 없다)
+                }
+            });
+        } catch (RuntimeException e) {
+            // 작업을 맡기지 못했으면 처리 중 표시를 풀어 다음 제출을 막지 않는다
+            session.endTurn();
+            throw e;
+        }
         return emitter;
     }
 
@@ -101,7 +122,7 @@ public class SpeakingService {
     }
 
     /* 한 턴 처리 (작업 스레드) : 복사본에서 진행하고, 끝까지 성공했을 때만 원본에 반영한다
-     *  AI 가 실패하면 복사본을 버리고 error 이벤트를 보낸다. 원본의 발언 · 게이지는 그대로다.
+     *  어떤 경우에도 예외를 밖으로 던지지 않는다. 실패는 error 이벤트로 보낸다.
      * */
     void runTurn(TrialSession session, String content, BiConsumer<String, Object> sender) {
 
@@ -109,12 +130,18 @@ public class SpeakingService {
             TrialSession draft = session.copy();
             playTurn(draft, content, sender);
 
-            // 성공 → 반영 · 실패 횟수 초기화를 turn_done 보다 먼저 한다
+            // 성공 → 반영 · 실패 횟수 초기화 · 처리 중 해제를 turn_done 보다 먼저 한다
+            // (turn_done 을 받자마자 다음 발언을 보내도 막히지 않게)
             session.applyFrom(draft);
             session.resetFailCount();
+            session.endTurn();
 
             String nextTurn = draft.isFinished() ? SpeakingTurnDoneEventDTO.VERDICT : SpeakingTurnDoneEventDTO.USER;
             sender.accept(EVENT_TURN_DONE, new SpeakingTurnDoneEventDTO(nextTurn));
+
+        } catch (ClientClosedException e) {
+            // 브라우저가 먼저 끊었다 → 반영하지 않고(복사본을 버림) 실패로도 세지 않는다
+            log.info("[SpeakingService] 브라우저 연결 끊김 : trialId={}", session.getTrialId());
 
         } catch (RuntimeException e) {
             ErrorCode errorCode = e instanceof BusinessException businessException
@@ -125,7 +152,15 @@ public class SpeakingService {
             }
 
             int failCount = session.increaseFailCount();
-            sender.accept(EVENT_ERROR, SpeakingErrorEventDTO.of(errorCode, failCount));
+            session.endTurn();
+            try {
+                sender.accept(EVENT_ERROR, SpeakingErrorEventDTO.of(errorCode, failCount));
+            } catch (ClientClosedException ignored) {
+                // 오류를 알리려는 사이에 브라우저가 끊었다
+            }
+
+        } finally {
+            session.endTurn();      // 위에서 못 풀고 끝난 경우를 위한 안전장치
         }
     }
 
@@ -182,12 +217,27 @@ public class SpeakingService {
         }
     }
 
-    /* SSE 이벤트 하나 보내기 : event: 이름 / data: JSON */
-    private void send(SseEmitter emitter, String event, Object data) {
+    /* SSE 이벤트 하나 보내기 : event: 이름 / data: JSON
+     *  브라우저가 끊었으면 send() 가 실패한다 → ClientClosedException 으로 바꿔 턴 처리를 멈춘다.
+     *  상대 발언 글자 조각을 보내다 끊기면 OpenAI 스트림 읽기도 함께 멈춰 비용을 아낀다.
+     * */
+    private void send(SseEmitter emitter, AtomicBoolean closed, String event, Object data) {
+
+        if (closed.get()) {
+            throw new ClientClosedException();
+        }
         try {
             emitter.send(SseEmitter.event().name(event).data(data));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);      // 브라우저가 끊은 경우 · 6-5 에서 따로 처리한다
+        } catch (IOException | IllegalStateException e) {
+            closed.set(true);
+            throw new ClientClosedException();
+        }
+    }
+
+    /* 브라우저가 연결을 끊었음을 알리는 내부용 예외 (테스트에서 끊김을 흉내 내려고 패키지 안에서 보이게 둔다) */
+    static class ClientClosedException extends UncheckedIOException {
+        ClientClosedException() {
+            super(new IOException("브라우저가 연결을 끊었다"));
         }
     }
 }
