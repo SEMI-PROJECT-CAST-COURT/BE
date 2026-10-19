@@ -5,6 +5,7 @@ import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardResponseDTO;
 import com.verdict.castcourt.domain.evidencecard.entity.EvidenceCardEntity;
 import com.verdict.castcourt.domain.evidencecard.service.EvidenceCardService;
 import com.verdict.castcourt.domain.penaltytier.dto.PenaltyTierDTO;
+import com.verdict.castcourt.domain.penaltytier.entity.PenaltyTierEntity;
 import com.verdict.castcourt.domain.penaltytier.service.PenaltyTierService;
 import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseCreateRequestDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.*;
@@ -58,6 +59,14 @@ public class WorkCaseService {
                                 EvidenceCardResponseDTO::new
                         )
                 ));
+
+        // 각 사건들의 형벌표 조회
+        Map<Integer, List<PenaltyTierDTO>> penaltiesByCase =
+                workCaseRepository.findPenaltiesByWorkId(workId).stream()
+                        .collect(Collectors.groupingBy(
+                                penalty -> penalty.getWorkCase().getId(),           // 사건 아이디
+                                Collectors.mapping(this::toPenaltyTierDTO, Collectors.toList())   // 형벌표 목록
+                        ));
         
         List<WorkCaseSummaryResponseDTO> cases = workCases.stream()
                 .map(workCase -> {
@@ -70,6 +79,7 @@ public class WorkCaseService {
                     return WorkCaseSummaryResponseDTO.of(
                             workCase,
                             difficulty,
+                            penaltiesByCase.getOrDefault(workCase.getId(), List.of()),
                             // TODO: 재판(trial) 구현 후 내 판결 조회로 교체
                             new MyVerdictsResponse(null, null)
                     );
@@ -161,6 +171,14 @@ public class WorkCaseService {
                 card.getTitle(),
                 card.getBody(),
                 card.getWeight()
+        );
+    }
+
+    private PenaltyTierDTO toPenaltyTierDTO(PenaltyTierEntity penalty) {
+
+        return new PenaltyTierDTO(
+                penalty.getTier(),
+                penalty.getSentence()
         );
     }
 
