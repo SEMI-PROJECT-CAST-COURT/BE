@@ -11,6 +11,7 @@ import com.verdict.castcourt.domain.trial.dto.TrialStartRequestDTO;
 import com.verdict.castcourt.domain.trial.dto.TrialStartResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
+import com.verdict.castcourt.domain.trial.entity.TrialEntity;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.repository.MyTrialRow;
 import com.verdict.castcourt.domain.trial.repository.TrialCaseReader;
@@ -21,6 +22,7 @@ import com.verdict.castcourt.domain.trial.session.TrialTurnOrder;
 import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,18 +42,21 @@ public class TrialService {
     private final TrialSessionStore trialSessionStore;
     private final SpeakingService speakingService;     // 변호인 시작 때 AI 검사 모두 진술 (6-6)
     private final VerdictAi verdictAi;                 // 판사 총평 (7-2)
+    private final TrialVerdictWriter trialVerdictWriter;   // 판결 저장 트랜잭션 (7-3)
 
     @Autowired
     public TrialService(TrialRepository trialRepository,
                         TrialCaseReader trialCaseReader,
                         TrialSessionStore trialSessionStore,
                         SpeakingService speakingService,
-                        VerdictAi verdictAi) {
+                        VerdictAi verdictAi,
+                        TrialVerdictWriter trialVerdictWriter) {
         this.trialRepository = trialRepository;
         this.trialCaseReader = trialCaseReader;
         this.trialSessionStore = trialSessionStore;
         this.speakingService = speakingService;
         this.verdictAi = verdictAi;
+        this.trialVerdictWriter = trialVerdictWriter;
     }
 
     /* 재판 시작 (TRL-01) : 검사 → 스냅샷 · 카드 추첨 → (변호인이면 AI 검사 모두 진술) → 메모리에 저장 (DB 저장 없음)
@@ -223,5 +228,14 @@ public class TrialService {
      * */
     String summarize(TrialSession session) {
         return verdictAi.summarize(session).output();
+    }
+
+    /* 저장 (트랜잭션 안) : 같은 판결이 동시에 두 번 들어와 UNIQUE(user_id, work_case_id, role) 에 걸리면 409 */
+    TrialEntity save(TrialSession session, int penaltyTier, String judgeSummary) {
+        try {
+            return trialVerdictWriter.save(session, penaltyTier, judgeSummary);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.ROLE_ALREADY_RECORDED);
+        }
     }
 }
