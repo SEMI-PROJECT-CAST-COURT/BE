@@ -48,6 +48,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/login").permitAll()
                     .requestMatchers(HttpMethod.POST, "/signup/user").permitAll()
                     .requestMatchers(HttpMethod.POST, "/signup/admin").hasAuthority("SUPER_ADMIN")
+                    .requestMatchers(HttpMethod.GET, "/account/admin").hasAuthority("SUPER_ADMIN")
                     .requestMatchers(HttpMethod.DELETE, "/admin/{id}").hasAuthority("SUPER_ADMIN")
                     .anyRequest().authenticated()
             )
