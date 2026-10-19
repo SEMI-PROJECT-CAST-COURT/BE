@@ -1,5 +1,6 @@
 package com.verdict.castcourt.domain.trial.repository;
 
+import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +15,8 @@ public interface TrialRepository extends JpaRepository<TrialEntity, Integer> {
      *  - 승리 조건은 ScoreRule.isWin 과 같다 : 변호인은 형벌 단계 1~3, 검사는 4~6
      *  - work_case · work 엔티티가 아직 없어서 네이티브 SQL 로 is_usage 만 읽는다
      * */
+    // 이 사건 · 역할로 판결 난 재판이 있는지 (재판 시작 409 검사)
+    boolean existsByUserIdAndWorkCaseIdAndRole(Integer userId, Integer workCaseId, Side role);
     @Query(value = """
             SELECT t.id                              AS trialId,
                    t.case_snapshot ->> '$.workTitle' AS workTitle,
