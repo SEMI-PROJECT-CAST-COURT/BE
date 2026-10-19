@@ -5,11 +5,13 @@ import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.rule.ScoreRule;
+import lombok.AccessLevel;
 import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /* 진행 중인 재판 한 판 (서버 메모리에만 있고 DB 에는 없다)
  *  판결 때 TrialEntity · SpeakingEntity 로 바뀌어 저장된다. (7장)
@@ -26,12 +28,19 @@ public class TrialSession {
     private final CaseSnapshot snapshot;        // 재판 시작 때의 사건 복사본
     private final List<Integer> drawnCardIds;   // 시작 때 뽑은 카드 (2~3장, 뽑힌 순서)
 
-    // speakings 는 final 을 빼고, 반영할 때 목록을 통째로 바꿔 끼운다. (applyFrom)
-    private List<TrialSessionSpeaking> speakings = new ArrayList<>();
-    private int cardCount = TrialTurnOrder.BASE_CARD_COUNT;    // 실제로 쓰는 카드 수
-    private int score = ScoreRule.START_SCORE;
+    /* 아래 세 값은 발언 처리 스레드가 바꾸고 재판 상태 조회 스레드가 읽는다.
+     *  volatile : 한 스레드가 바꾼 값을 다른 스레드가 바로 보게 한다.
+     *  speakings 는 final 을 빼고, 반영할 때 목록을 통째로 바꿔 끼운다. (applyFrom)
+     * */
+    private volatile List<TrialSessionSpeaking> speakings = new ArrayList<>();
+    private volatile int cardCount = TrialTurnOrder.BASE_CARD_COUNT;    // 실제로 쓰는 카드 수
+    private volatile int score = ScoreRule.START_SCORE;
 
     private int failCount;          // AI 실패 연속 횟수 (성공하면 0)
+
+    // 발언 처리 중인지 · 같은 재판에 발언이 동시에 두 번 들어오지 못하게 막는다 (밖에서 직접 못 만지게 @Getter 제외)
+    @Getter(AccessLevel.NONE)
+    private final AtomicBoolean processing = new AtomicBoolean(false);
 
     public TrialSession(String trialId, int userId, int workCaseId, Side role, TrialMode mode,
                         CaseSnapshot snapshot, List<Integer> drawnCardIds) {
@@ -121,6 +130,16 @@ public class TrialSession {
 
     public void resetFailCount() {
         failCount = 0;
+    }
+
+    /* 발언 처리 시작 : 이미 처리 중이면 false (compareAndSet 은 확인과 변경을 한 번에 해서 두 요청이 함께 통과하지 못한다) */
+    public boolean tryStartTurn() {
+        return processing.compareAndSet(false, true);
+    }
+
+    /* 발언 처리 끝 (여러 번 불러도 안전) */
+    public void endTurn() {
+        processing.set(false);
     }
 
     /* 밖에서 목록을 고치지 못하게 읽기 전용으로 준다 */
