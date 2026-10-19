@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Integer> { ;
 
-    List<WorkCaseEntity> getWorkCasesByWorkId(Long workId);
+    List<WorkCaseEntity> getWorkCasesByWorkId(Integer workId);
 
     /* 특정 작품의 진행된 사건 개수: 진행도(progress) 계산에 사용 */
     @Query(
@@ -25,8 +25,8 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
                     "",
             nativeQuery = true
     )
-    int countDoneWorkCases(@Param("workId") Long workId,
-                           @Param("userId") Long userId);
+    int countDoneWorkCases(@Param("workId") Integer workId,
+                           @Param("userId") Integer userId);
 
     /* 재판 진행 기록 존재 여부 */
     @Query(
@@ -39,8 +39,8 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
                     "",
             nativeQuery = true
     )
-    long existsByUserIdAndCaseIdAndRole(@Param("caseId") Long caseId,
-                                        @Param("userId") Long userId,
+    long existsByUserIdAndCaseIdAndRole(@Param("caseId") Integer caseId,
+                                        @Param("userId") Integer userId,
                                         @Param("role") String role);
 
     // TODO: 추후에 service 코드로 교체 - 찬웅님
@@ -53,7 +53,7 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
                     "",
             nativeQuery = true
     )
-    List<WorkCaseCardRow> findCardsByCaseId(@Param("caseId") Long caseId);
+    List<WorkCaseCardRow> findCardsByCaseId(@Param("caseId") Integer caseId);
 
     // TODO: 추후에 service 코드로 교체 - 찬웅님
     /* 특정 사건의 형벌표 조회 */
@@ -65,7 +65,7 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
                     "ORDER BY tier",
             nativeQuery = true
     )
-    List<WorkCasePenaltyRow> findPenaltiesByCaseId(@Param("caseId") Long caseId);
+    List<WorkCasePenaltyRow> findPenaltiesByCaseId(@Param("caseId") Integer caseId);
 
     /* 목록 난이도 - 변호사의 근거 카드 가중치 합, 검사의 근거카드 가중치 합 */
     @Query(
@@ -80,5 +80,5 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
                     "",
             nativeQuery = true
     )
-    List<WorkCaseWeightSumRow> sumWeightByWorkId(@Param("workId") Long workId);
+    List<WorkCaseWeightSumRow> sumWeightByWorkId(@Param("workId") Integer workId);
 }

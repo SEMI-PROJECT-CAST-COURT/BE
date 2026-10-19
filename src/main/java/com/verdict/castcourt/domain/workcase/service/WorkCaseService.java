@@ -1,8 +1,8 @@
 package com.verdict.castcourt.domain.workcase.service;
 
-import com.verdict.castcourt.domain.workcase.dto.*;
-import com.verdict.castcourt.domain.workcase.dto.WorkCaseSummaryResponseDTO.*;
-import com.verdict.castcourt.domain.workcase.dto.WorkCaseListResponseDTO.*;
+import com.verdict.castcourt.domain.workcase.dto.response.*;
+import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.*;
+import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO.*;
 import com.verdict.castcourt.domain.workcase.dto.projection.WorkCaseCardRow;
 import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
 import com.verdict.castcourt.domain.workcase.repository.WorkCaseRepository;
@@ -27,7 +27,7 @@ public class WorkCaseService {
 
     /* 사건 목록 조회 */
     @Transactional(readOnly = true)
-    public WorkCaseListResponseDTO getWorkCaseList(long workId, long userId) {
+    public WorkCaseListResponseDTO getWorkCaseList(int workId, int userId) {
 
         // 작품 id로 사건 목록 조회
         List<WorkCaseEntity> workCases = workCaseRepository.getWorkCasesByWorkId(workId).stream()
@@ -55,11 +55,11 @@ public class WorkCaseService {
     
     /* 사건 불러오기 - 사건 수정 화면에서 사용 */
     @Transactional(readOnly = true)
-    public WorkCaseDetailResponseDTO getWorkCase(long caseId, long userId) {
+    public WorkCaseDetailResponseDTO getWorkCase(int caseId) {
         
         // TODO: 권한 체크
         
-        WorkCaseEntity workCase = workCaseRepository.findById((int) caseId)
+        WorkCaseEntity workCase = workCaseRepository.findById(caseId)
                 .filter(WorkCaseEntity::isUsage)      // 삭제된 사건 제외
                 .orElseThrow(() -> new BusinessException(ErrorCode.CASE_NOT_FOUND));
 
@@ -72,7 +72,7 @@ public class WorkCaseService {
 
     /* 재판 준비 */
     @Transactional(readOnly = true)
-    public WorkCasePrepareResponseDTO getWorkCasePrepare(int caseId, long userId) {
+    public WorkCasePrepareResponseDTO getWorkCasePrepare(int caseId, int userId) {
 
         WorkCaseEntity workCase = workCaseRepository.findById(caseId)
                 .filter(WorkCaseEntity::isUsage)      // 삭제된 사건 제외
@@ -80,10 +80,10 @@ public class WorkCaseService {
 
         // 재판 기록 존재 여부 확인
         boolean defRecorded = workCaseRepository.existsByUserIdAndCaseIdAndRole(
-                (long) caseId, userId, "DEFENSE"
+                caseId, userId, "DEFENSE"
         ) > 0;
         boolean proRecorded = workCaseRepository.existsByUserIdAndCaseIdAndRole(
-                (long) caseId, userId, "PROSECUTION"
+                caseId, userId, "PROSECUTION"
         ) > 0;
 
         return WorkCasePrepareResponseDTO.of(

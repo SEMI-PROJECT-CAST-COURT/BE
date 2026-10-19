@@ -8,8 +8,8 @@ public class WorkCaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;                    // PK
-    private Long workId;                // 작품 id TODO: (추후 Work 개발 시, 참조 관계로 변경)
+    private int id;                    // PK
+    private int workId;                // 작품 id TODO: (추후 Work 개발 시, 참조 관계로 변경)
     String question;                    // 쟁점
     String suspect;                     // 피의자
     String victim;                      // 피해자
@@ -19,7 +19,7 @@ public class WorkCaseEntity {
 
     public WorkCaseEntity() {}
 
-    public WorkCaseEntity(Long id, Long workId, String question, String suspect, String victim, String summary, String progress, boolean isUsage) {
+    public WorkCaseEntity(int id, int workId, String question, String suspect, String victim, String summary, String progress, boolean isUsage) {
         this.id = id;
         this.workId = workId;
         this.question = question;
@@ -30,11 +30,11 @@ public class WorkCaseEntity {
         this.isUsage = isUsage;
     }
 
-    public Long getId() {
+    public int getId() {
         return id;
     }
 
-    public Long getWorkId() {
+    public int getWorkId() {
         return workId;
     }
 
