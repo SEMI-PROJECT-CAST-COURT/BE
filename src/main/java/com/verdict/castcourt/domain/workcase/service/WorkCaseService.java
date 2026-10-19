@@ -5,6 +5,7 @@ import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardResponseDTO;
 import com.verdict.castcourt.domain.evidencecard.entity.EvidenceCardEntity;
 import com.verdict.castcourt.domain.evidencecard.service.EvidenceCardService;
 import com.verdict.castcourt.domain.penaltytier.dto.PenaltyTierDTO;
+import com.verdict.castcourt.domain.penaltytier.entity.PenaltyTierEntity;
 import com.verdict.castcourt.domain.penaltytier.service.PenaltyTierService;
 import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseCreateRequestDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.*;
@@ -58,6 +59,14 @@ public class WorkCaseService {
                                 EvidenceCardResponseDTO::new
                         )
                 ));
+
+        // 각 사건들의 형벌표 조회
+        Map<Integer, List<PenaltyTierDTO>> penaltiesByCase =
+                workCaseRepository.findPenaltiesByWorkId(workId).stream()
+                        .collect(Collectors.groupingBy(
+                                penalty -> penalty.getWorkCase().getId(),           // 사건 아이디
+                                Collectors.mapping(this::toPenaltyTierDTO, Collectors.toList())   // 형벌표 목록
+                        ));
         
         List<WorkCaseSummaryResponseDTO> cases = workCases.stream()
                 .map(workCase -> {
@@ -70,6 +79,7 @@ public class WorkCaseService {
                     return WorkCaseSummaryResponseDTO.of(
                             workCase,
                             difficulty,
+                            penaltiesByCase.getOrDefault(workCase.getId(), List.of()),
                             // TODO: 재판(trial) 구현 후 내 판결 조회로 교체
                             new MyVerdictsResponse(null, null)
                     );
@@ -138,16 +148,17 @@ public class WorkCaseService {
 
     /* 사건 등록 */
     public int saveWorkCase(WorkCaseCreateRequestDTO requestDTO) {
-        
-        // TODO: 작품 존재 여부 체크
 
-        // TODO: 입력값 검증
+        // 사건 입력값 검증
+        validateCase(requestDTO);
 
+        // 사건 등록
         WorkCaseEntity workCase = dtoToEntity(requestDTO);
-
         WorkCaseEntity savedWorkCase = workCaseRepository.save(workCase);
 
-        // TODO: 근거 카드 등록
+        // 근거 카드 등록
+        evidenceCardService.saveEvidenceCard(savedWorkCase, requestDTO.cards());
+
         // TODO: 형벌표 등록
 
         return savedWorkCase.getId();
@@ -163,6 +174,14 @@ public class WorkCaseService {
         );
     }
 
+    private PenaltyTierDTO toPenaltyTierDTO(PenaltyTierEntity penalty) {
+
+        return new PenaltyTierDTO(
+                penalty.getTier(),
+                penalty.getSentence()
+        );
+    }
+
     private WorkCaseEntity dtoToEntity(WorkCaseCreateRequestDTO requestDTO) {
 
         return new WorkCaseEntity(
@@ -174,5 +193,36 @@ public class WorkCaseService {
                 requestDTO.progress(),
                 true
         );
+    }
+
+    private void validateCase(WorkCaseCreateRequestDTO requestDTO) {
+
+        // TODO: 작품 존재 여부 체크
+
+        // 유효하지 않은 작품 id
+        if(requestDTO.workId() <= 0)
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // null question 또는 길이 초과
+        if(requestDTO.question() == null || requestDTO.question().isBlank() ||
+                requestDTO.question().length() > 100)
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // null suspect 또는 길이 초과
+        if(requestDTO.suspect() == null || requestDTO.suspect().isBlank() ||
+                requestDTO.suspect().length() > 50)
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // null victim 또는 길이 초과
+        if(requestDTO.victim() == null || requestDTO.victim().isBlank() ||
+                requestDTO.victim().length() > 50)
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // null summary 또는 길이 초과
+        if(requestDTO.summary() == null || requestDTO.summary().isBlank() ||
+                requestDTO.summary().length() > 1000)
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // null progress
+        if(requestDTO.progress() == null || requestDTO.progress().isBlank())
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // progress 길이 초과
+        if(requestDTO.progress().length() > 1000)
+            throw new BusinessException(ErrorCode.CASE_PROGRESS_TOO_LONG);
     }
 }
