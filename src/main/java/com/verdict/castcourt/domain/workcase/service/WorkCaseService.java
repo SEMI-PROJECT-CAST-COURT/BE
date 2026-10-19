@@ -1,10 +1,15 @@
 package com.verdict.castcourt.domain.workcase.service;
 
+import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardDTO;
+import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardResponseDTO;
+import com.verdict.castcourt.domain.evidencecard.entity.EvidenceCardEntity;
+import com.verdict.castcourt.domain.evidencecard.service.EvidenceCardService;
+import com.verdict.castcourt.domain.penaltytier.dto.PenaltyTierDTO;
+import com.verdict.castcourt.domain.penaltytier.service.PenaltyTierService;
 import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseCreateRequestDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.*;
-import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.*;
-import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO.*;
-import com.verdict.castcourt.domain.workcase.dto.projection.WorkCaseCardRow;
+import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO.ProgressResponse;
+import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.MyVerdictsResponse;
 import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
 import com.verdict.castcourt.domain.workcase.repository.WorkCaseRepository;
 import com.verdict.castcourt.global.exception.BusinessException;
@@ -12,19 +17,27 @@ import com.verdict.castcourt.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseDetailResponseDTO.*;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class WorkCaseService {
 
     private final WorkCaseRepository workCaseRepository;
+    private final PenaltyTierService penaltyTierService;
+    private final EvidenceCardService evidenceCardService;
 
     @Autowired
-    public WorkCaseService(WorkCaseRepository workCaseRepository) {
+    public WorkCaseService(WorkCaseRepository workCaseRepository,
+                           PenaltyTierService penaltyTierService,
+                           EvidenceCardService evidenceCardService) {
         this.workCaseRepository = workCaseRepository;
+        this.penaltyTierService = penaltyTierService;
+        this.evidenceCardService = evidenceCardService;
     }
 
     /* 사건 목록 조회 */
@@ -36,14 +49,31 @@ public class WorkCaseService {
                 .filter(WorkCaseEntity::isUsage)      // 삭제된 사건 제외
                 .toList();
 
+        // 각 사건들의 근거 카드 목록 조회 - caseId로 grouping하여 Map으로 반환
+        Map<Integer, EvidenceCardResponseDTO> cardsByCase = workCaseRepository.findEvidenceCardsByWorkId(workId).stream()
+                .collect(Collectors.groupingBy(
+                        card -> card.getWorkCase().getId(),
+                        Collectors.collectingAndThen(
+                                Collectors.mapping(this::toEvidenceCardDTO, Collectors.toList()),
+                                EvidenceCardResponseDTO::new
+                        )
+                ));
+        
         List<WorkCaseSummaryResponseDTO> cases = workCases.stream()
-                .map(workCase -> WorkCaseSummaryResponseDTO.of(
-                        workCase,
-                        // TODO: 근거 카드 구현 후, WeightSumResponse.toDifficulty()로 교체
-                        new DifficultyResponseDTO(Difficulty.NORMAL, Difficulty.NORMAL),
-                        // TODO: 재판(trial) 구현 후 내 판결 조회로 교체
-                        new MyVerdictsResponse(null, null)
-                ))
+                .map(workCase -> {
+                    // case 마다 근거카드 리스트 꺼내서 난이도 계산
+                    EvidenceCardResponseDTO cards = cardsByCase.get(workCase.getId());
+                    DifficultyResponseDTO difficulty = (cards == null)
+                            ? new DifficultyResponseDTO(Difficulty.NORMAL, Difficulty.NORMAL)   // 근거 카드 없는 사건
+                            : DifficultyResponseDTO.of(cards.getDefenseTotalWeight(), cards.getProsecutionTotalWeight());
+
+                    return WorkCaseSummaryResponseDTO.of(
+                            workCase,
+                            difficulty,
+                            // TODO: 재판(trial) 구현 후 내 판결 조회로 교체
+                            new MyVerdictsResponse(null, null)
+                    );
+                })
                 .toList();
 
         // 해당 작품의 완료된 사건 개수 조회
@@ -59,21 +89,17 @@ public class WorkCaseService {
     @Transactional(readOnly = true)
     public WorkCaseDetailResponseDTO getWorkCase(int caseId) {
 
-
         // 사건 조회
         WorkCaseEntity workCase = workCaseRepository.findById(caseId)
                 .filter(WorkCaseEntity::isUsage)      // 삭제된 사건 제외
                 .orElseThrow(() -> new BusinessException(ErrorCode.CASE_NOT_FOUND));
 
-        // 해당 사건의 근거 카드 조회
-        List<CardResponse> cards = toCardResponse(workCaseRepository.findCardsByCaseId(caseId));
-
         return WorkCaseDetailResponseDTO.of(
                 workCase,
-                cards,
-                workCaseRepository.findPenaltiesByCaseId(caseId).stream()
-                        .map(row -> new PenaltyResponse(row.getTier(), row.getSentence()))
-                        .toList()   // 해당 사건의 패널티 목록 조회
+                evidenceCardService.findEvidenceCardsByWorkCaseId(caseId),   // 해당 사건의 근거 카드 목록 조회
+                penaltyTierService.findPenaltyTierByWorkCaseId(caseId).stream() // 해당 사건의 패널티 목록 조회
+                        .sorted(Comparator.comparingInt(PenaltyTierDTO::getTier))
+                        .toList()
         );
     }
 
@@ -93,14 +119,20 @@ public class WorkCaseService {
                 caseId, userId, "PROSECUTION"
         ) > 0;
 
+        // 근거 카드 조회
+        EvidenceCardResponseDTO cards = evidenceCardService.findEvidenceCardsByWorkCaseId(caseId);
+
         return WorkCasePrepareResponseDTO.of(
                 workCase,
-                // TODO: 근거 카드 구현 후 대체
-                new DifficultyResponseDTO(Difficulty.NORMAL, Difficulty.NORMAL),
+                DifficultyResponseDTO.of(   // 난이도 계산
+                        cards.getDefenseTotalWeight(),
+                        cards.getProsecutionTotalWeight()
+                ),
                 defRecorded,
                 proRecorded,
-                // TODO: 패널티 구현 후 대체
-                null
+                penaltyTierService.findPenaltyTierByWorkCaseId(caseId).stream() // 패널티 목록 조회
+                        .sorted(Comparator.comparingInt(PenaltyTierDTO::getTier))
+                        .toList()
         );
     }
 
@@ -121,18 +153,14 @@ public class WorkCaseService {
         return savedWorkCase.getId();
     }
 
-    // 프로젝션 -> 응답용 CardResponse 변환
-    // TODO: EvidenceCard 엔티티 생성 후, 엔티티 기반 변환으로 교체
-    private List<CardResponse> toCardResponse(List<WorkCaseCardRow> rows) {
+    private EvidenceCardDTO toEvidenceCardDTO(EvidenceCardEntity card) {
 
-        return rows.stream()
-                .map(row -> new CardResponse(
-                        Side.valueOf(row.getSide()),
-                        row.getTitle(),
-                        row.getBody(),
-                        row.getWeight()
-                ))
-                .toList();
+        return new EvidenceCardDTO(
+                card.getSide(),
+                card.getTitle(),
+                card.getBody(),
+                card.getWeight()
+        );
     }
 
     private WorkCaseEntity dtoToEntity(WorkCaseCreateRequestDTO requestDTO) {
