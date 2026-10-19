@@ -29,8 +29,7 @@ public class EvidenceCardEntity {
 
     public EvidenceCardEntity() {}
 
-    public EvidenceCardEntity(int id, WorkCaseEntity workCase, String side, String title, String body, int weight) {
-        this.id = id;
+    public EvidenceCardEntity(WorkCaseEntity workCase, String side, String title, String body, int weight) {
         this.workCase = workCase;
         this.side = side;
         this.title = title;
@@ -40,10 +39,6 @@ public class EvidenceCardEntity {
 
     public int getId() {
         return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
     }
 
     public WorkCaseEntity getWorkCase() {
