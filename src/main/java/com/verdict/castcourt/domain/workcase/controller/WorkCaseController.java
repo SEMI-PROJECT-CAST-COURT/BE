@@ -56,8 +56,11 @@ public class WorkCaseController {
 
     /* 사건 등록 */
     @PostMapping("/api/admin/cases")
-    public int registerWorkCase(@RequestBody WorkCaseCreateRequestDTO request) {
+    public SingleResponse<Integer> registerWorkCase(@RequestBody WorkCaseCreateRequestDTO requestDTO) {
 
-        return 0;
+        return new SingleResponse<>(
+                201,
+                workCaseService.saveWorkCase(requestDTO)
+        );
     }
 }
