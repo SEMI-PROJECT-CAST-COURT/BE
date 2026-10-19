@@ -1,6 +1,9 @@
 package com.verdict.castcourt.domain.workcase.dto.response;
 
+import com.verdict.castcourt.domain.penaltytier.dto.PenaltyTierDTO;
 import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
+
+import java.util.List;
 
 /* 사건의 세부 정보가 아닌 사건 카드에 들어가는 내용만 담는 DTO */
 public record WorkCaseSummaryResponseDTO(
@@ -9,6 +12,7 @@ public record WorkCaseSummaryResponseDTO(
    String victim,
    String question,
    DifficultyResponseDTO difficulty,
+   List<PenaltyTierDTO> penalties,
    MyVerdictsResponse my
 ) {
     // 판결 결과
@@ -18,6 +22,7 @@ public record WorkCaseSummaryResponseDTO(
 
     public static WorkCaseSummaryResponseDTO of(WorkCaseEntity workCase,
                                                 DifficultyResponseDTO difficulty,
+                                                List<PenaltyTierDTO> penalties,
                                                 MyVerdictsResponse my) {
 
         return new WorkCaseSummaryResponseDTO(
@@ -26,6 +31,7 @@ public record WorkCaseSummaryResponseDTO(
                 workCase.getVictim(),
                 workCase.getQuestion(),
                 difficulty,
+                penalties,
                 my
         );
     }

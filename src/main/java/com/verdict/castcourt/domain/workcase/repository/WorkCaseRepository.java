@@ -1,6 +1,7 @@
 package com.verdict.castcourt.domain.workcase.repository;
 
 import com.verdict.castcourt.domain.evidencecard.entity.EvidenceCardEntity;
+import com.verdict.castcourt.domain.penaltytier.entity.PenaltyTierEntity;
 import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,7 +21,7 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
                     "JOIN work_case wc ON wc.id = t.work_case_id " +
                     "WHERE t.user_id = :userId " +
                     "AND wc.work_id = :workId " +
-                    "AND wc.is_usage = true" +
+                    "AND wc.is_usage = TRUE" +
                     "",
             nativeQuery = true
     )
@@ -45,8 +46,17 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
     /* 특정 작품에 속한 사건들의 근거 카드 전체 조회 - 목록 난이도 계산용 */
     @Query(
             "SELECT ec FROM EvidenceCardEntity ec " +
-            "WHERE ec.workCase.workId = :workId " +
-            "AND ec.workCase.isUsage = true"
+                    "WHERE ec.workCase.workId = :workId " +
+                    "AND ec.workCase.isUsage = true"
     )
     List<EvidenceCardEntity> findEvidenceCardsByWorkId(@Param("workId") Integer workId);
+
+    /* 특정 작품에 속한 사건들의 형벌표 전체 조회 - 목록 조회용 */
+    @Query(
+            "SELECT pt FROM PenaltyTierEntity pt " +
+            "WHERE pt.workCase.workId = :workId " +
+            "AND pt.workCase.isUsage = true " +
+            "ORDER BY pt.tier"
+    )
+    List<PenaltyTierEntity> findPenaltiesByWorkId(@Param("workId") Integer workId);
 }
