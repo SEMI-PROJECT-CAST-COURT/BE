@@ -3,6 +3,7 @@ package com.verdict.castcourt.domain.speaking.service;
 import com.verdict.castcourt.domain.speaking.ai.JudgeAi;
 import com.verdict.castcourt.domain.speaking.ai.JudgeResult;
 import com.verdict.castcourt.domain.speaking.ai.OpponentAi;
+import com.verdict.castcourt.domain.speaking.dto.SpeakingErrorEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.SpeakingJudgeEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.SpeakingRequestDTO;
 import com.verdict.castcourt.domain.speaking.dto.SpeakingStageEventDTO;
@@ -15,6 +16,7 @@ import com.verdict.castcourt.domain.trial.session.TrialSessionStore;
 import com.verdict.castcourt.domain.trial.session.TrialTurn;
 import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ import java.util.function.Supplier;
  *  - 작업 스레드 : AI 를 부르며 이벤트를 보낸다. 여기서 난 오류는 error 이벤트로 알린다. (이미 응답 중이라 상태 코드를 못 바꾼다)
  *  흐름은 예제 RecommendationService 와 같다.
  * */
+@Slf4j
 @Service
 public class SpeakingService {
 
@@ -45,6 +48,7 @@ public class SpeakingService {
     static final String EVENT_OPPONENT_JUDGE = "opponent_judge";
     static final String EVENT_STAGE = "stage";
     static final String EVENT_TURN_DONE = "turn_done";
+    static final String EVENT_ERROR = "error";
 
     private final TrialSessionStore trialSessionStore;
     private final JudgeAi judgeAi;              // 가짜 / 실제 중 설정값으로 정해진 하나 (5장)
@@ -96,15 +100,33 @@ public class SpeakingService {
         return session;
     }
 
-    /* 한 턴 처리 (작업 스레드) : 판정 · 상대 발언을 재판에 바로 기록하고 turn_done 으로 끝낸다
-     *  AI 가 실패했을 때의 처리는 6-4 에서 붙인다.
+    /* 한 턴 처리 (작업 스레드) : 복사본에서 진행하고, 끝까지 성공했을 때만 원본에 반영한다
+     *  AI 가 실패하면 복사본을 버리고 error 이벤트를 보낸다. 원본의 발언 · 게이지는 그대로다.
      * */
     void runTurn(TrialSession session, String content, BiConsumer<String, Object> sender) {
 
-        playTurn(session, content, sender);
+        try {
+            TrialSession draft = session.copy();
+            playTurn(draft, content, sender);
 
-        String nextTurn = session.isFinished() ? SpeakingTurnDoneEventDTO.VERDICT : SpeakingTurnDoneEventDTO.USER;
-        sender.accept(EVENT_TURN_DONE, new SpeakingTurnDoneEventDTO(nextTurn));
+            // 성공 → 반영 · 실패 횟수 초기화를 turn_done 보다 먼저 한다
+            session.applyFrom(draft);
+            session.resetFailCount();
+
+            String nextTurn = draft.isFinished() ? SpeakingTurnDoneEventDTO.VERDICT : SpeakingTurnDoneEventDTO.USER;
+            sender.accept(EVENT_TURN_DONE, new SpeakingTurnDoneEventDTO(nextTurn));
+
+        } catch (RuntimeException e) {
+            ErrorCode errorCode = e instanceof BusinessException businessException
+                    ? businessException.getErrorCode()
+                    : ErrorCode.INTERNAL_SERVER_ERROR;
+            if (!(e instanceof BusinessException)) {
+                log.error("[SpeakingService] 턴 처리 중 예상하지 못한 오류", e);
+            }
+
+            int failCount = session.increaseFailCount();
+            sender.accept(EVENT_ERROR, SpeakingErrorEventDTO.of(errorCode, failCount));
+        }
     }
 
     /* 판정 → (끝나지 않았으면) 상대 발언 → 판정 → 단계가 바뀌었으면 stage */
