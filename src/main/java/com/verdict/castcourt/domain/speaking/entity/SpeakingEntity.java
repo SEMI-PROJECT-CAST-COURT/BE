@@ -1,7 +1,7 @@
 package com.verdict.castcourt.domain.speaking.entity;
 
 import com.verdict.castcourt.domain.trial.entity.Side;
-import com.verdict.castcourt.domain.trial.entity.Trial;
+import com.verdict.castcourt.domain.trial.entity.TrialEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "speaking")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Speaking {
+public class SpeakingEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,7 +33,7 @@ public class Speaking {
     // 이 발언이 속한 재판 (필요할 때만 읽어 오도록 LAZY)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trial_id", nullable = false)
-    private Trial trial;
+    private TrialEntity trial;
 
     // 재판 안에서의 순서 1~16 (카드 3장이면 22)
     @Column(name = "seq", nullable = false)

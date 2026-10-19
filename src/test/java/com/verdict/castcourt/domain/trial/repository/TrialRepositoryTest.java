@@ -2,11 +2,11 @@ package com.verdict.castcourt.domain.trial.repository;
 
 import com.verdict.castcourt.domain.speaking.entity.Grade;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
-import com.verdict.castcourt.domain.speaking.entity.Speaking;
+import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
 import com.verdict.castcourt.domain.speaking.entity.Stage;
 import com.verdict.castcourt.domain.speaking.repository.SpeakingRepository;
 import com.verdict.castcourt.domain.trial.entity.Side;
-import com.verdict.castcourt.domain.trial.entity.Trial;
+import com.verdict.castcourt.domain.trial.entity.TrialEntity;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,7 +34,7 @@ class TrialRepositoryTest {
     @Test
     @DisplayName("더미 재판 1번을 읽으면 JSON 컬럼까지 객체로 바뀐다")
     void findDummyTrial() {
-        Trial trial = trialRepository.findById(1).orElseThrow();
+        TrialEntity trial = trialRepository.findById(1).orElseThrow();
 
         assertEquals(4, trial.getUserId());
         assertEquals(7, trial.getWorkCaseId());
@@ -53,11 +53,11 @@ class TrialRepositoryTest {
     @Test
     @DisplayName("더미 재판 1번의 발언을 순서대로 읽는다")
     void findDummySpeakings() {
-        List<Speaking> speakings = speakingRepository.findByTrialIdOrderBySeqAsc(1);
+        List<SpeakingEntity> speakings = speakingRepository.findByTrialIdOrderBySeqAsc(1);
 
         assertFalse(speakings.isEmpty());
 
-        Speaking first = speakings.get(0);
+        SpeakingEntity first = speakings.get(0);
         assertEquals(1, first.getSeq());
         assertEquals(Stage.OPENING, first.getStage());
         assertEquals(Side.PROSECUTION, first.getSide());

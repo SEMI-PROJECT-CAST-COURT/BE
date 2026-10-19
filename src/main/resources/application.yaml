@@ -2,11 +2,6 @@ spring:
   application:
     name: cast-court
 
-  session:
-    jdbc:
-      initialize-schema: always
-
-
   # Database 연결 설정
   datasource:
     url: ${DB_URL}
