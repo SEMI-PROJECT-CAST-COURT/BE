@@ -80,4 +80,23 @@ class TrialTurnOrderTest {
         assertTrue(TrialTurnOrder.needsThirdCard(53));
         assertFalse(TrialTurnOrder.needsThirdCard(54));
     }
+
+    @ParameterizedTest(name = "seq {0} = 카드 {1} · 공방 {2}")
+    @DisplayName("공방 단계의 카드 번호 · 공방 번호 (공방이 아니면 null)")
+    @CsvSource({
+            "2,  ,  ",
+            "3,  1, 1",
+            "4,  1, 1",
+            "5,  1, 2",
+            "8,  1, 3",
+            "9,  2, 1",
+            "14, 2, 3",
+            "15, ,  "
+    })
+    void cardAndExchangeNo(int seq, Integer cardNo, Integer exchangeNo) {
+        TrialTurn turn = TrialTurnOrder.turnAt(seq, Side.PROSECUTION, TWO_CARDS);
+
+        assertEquals(cardNo, TrialTurnOrder.cardNo(turn));
+        assertEquals(exchangeNo, TrialTurnOrder.exchangeNo(turn));
+    }
 }

@@ -50,14 +50,35 @@ public final class TrialTurnOrder {
         }
 
         // 공방 안에서 0부터 센 위치 → 몇 번째 카드인지, 카드 안에서 몇 번째인지
-        int offset = seq - OPENING_COUNT - 1;
+        int offset = cardOffset(seq);
         int cardIndex = offset / SPEAKINGS_PER_CARD;
         return turn(seq, Stage.CARD, sideAt(offset % SPEAKINGS_PER_CARD), role, usedCardIds.get(cardIndex));
+    }
+
+    /* 공방 단계에서 몇 번째 카드인지 1~3 · 공방이 아니면 null (재판 상태 cardNo) */
+    public static Integer cardNo(TrialTurn turn) {
+        if (turn.stage() != Stage.CARD) {
+            return null;
+        }
+        return cardOffset(turn.seq()) / SPEAKINGS_PER_CARD + 1;
+    }
+
+    /* 카드 안에서 몇 번째 공방(검사 공격 + 변호인 반론)인지 1~3 · 공방이 아니면 null (재판 상태 exchangeNo) */
+    public static Integer exchangeNo(TrialTurn turn) {
+        if (turn.stage() != Stage.CARD) {
+            return null;
+        }
+        return cardOffset(turn.seq()) % SPEAKINGS_PER_CARD / 2 + 1;
     }
 
     /* 3번째 카드 조건 : 카드 2장 공방 뒤 게이지가 47~53 (승부가 아직 팽팽함) */
     public static boolean needsThirdCard(int score) {
         return score >= THIRD_CARD_MIN_SCORE && score <= THIRD_CARD_MAX_SCORE;
+    }
+
+    // 공방 안에서 0부터 센 위치 (seq 3 → 0, seq 9 → 6)
+    private static int cardOffset(int seq) {
+        return seq - OPENING_COUNT - 1;
     }
 
     // 단계 안에서 0 · 2 · 4번째는 검사, 1 · 3 · 5번째는 변호인
