@@ -1,9 +1,11 @@
 package com.verdict.castcourt.domain.account.controller;
 
+import com.verdict.castcourt.domain.account.dto.AccountDTO;
 import com.verdict.castcourt.domain.account.dto.SignupDTO;
 import com.verdict.castcourt.domain.account.dto.LoginRequestDTO;
 import com.verdict.castcourt.domain.account.dto.LoginResponseDTO;
 import com.verdict.castcourt.domain.account.service.AccountService;
+import com.verdict.castcourt.global.response.ListResponse;
 import com.verdict.castcourt.global.response.SingleResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -11,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 public class AccountController {
@@ -54,6 +58,15 @@ public class AccountController {
         accountService.adminSignup(signupDTO);
 
         return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), "회원가입 성공"));
+    }
+
+    @Operation(summary = "관리자 목록 조회",
+            description = "전체 관리자 계정 목록을 가져옵니다. 슈퍼어드민 권한이 있는 사용자만 조회 가능합니다.")
+    @GetMapping("/account/admin")
+    public ResponseEntity<ListResponse<AccountDTO>> findAllFields() {
+        List<AccountDTO> accounts = accountService.findAllAdminAccounts();
+
+        return ResponseEntity.ok(new ListResponse<>(HttpStatus.OK.value(), accounts));
     }
 
     @Operation(summary = "관리자 계정 비활성화",
