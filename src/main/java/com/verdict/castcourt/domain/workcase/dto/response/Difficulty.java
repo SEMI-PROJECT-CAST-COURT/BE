@@ -1,4 +1,4 @@
-package com.verdict.castcourt.domain.workcase.dto;
+package com.verdict.castcourt.domain.workcase.dto.response;
 
 /* 난이도 */
 public enum Difficulty {

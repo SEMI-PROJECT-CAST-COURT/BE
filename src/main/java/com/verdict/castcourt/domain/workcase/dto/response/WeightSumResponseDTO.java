@@ -1,7 +1,7 @@
-package com.verdict.castcourt.domain.workcase.dto;
+package com.verdict.castcourt.domain.workcase.dto.response;
 
 import java.util.List;
-import com.verdict.castcourt.domain.workcase.dto.WorkCaseDetailResponseDTO.*;
+import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseDetailResponseDTO.*;
 
 /* 각 역할별 근거 카드의 가중치 합 DTO */
 public record WeightSumResponseDTO(int def, int pro) {

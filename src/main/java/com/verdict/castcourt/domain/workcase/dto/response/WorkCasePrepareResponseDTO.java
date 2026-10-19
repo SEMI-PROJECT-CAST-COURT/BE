@@ -1,4 +1,4 @@
-package com.verdict.castcourt.domain.workcase.dto;
+package com.verdict.castcourt.domain.workcase.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;

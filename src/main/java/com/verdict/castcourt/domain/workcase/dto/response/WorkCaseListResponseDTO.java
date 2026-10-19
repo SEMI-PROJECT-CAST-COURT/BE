@@ -1,4 +1,4 @@
-package com.verdict.castcourt.domain.workcase.dto;
+package com.verdict.castcourt.domain.workcase.dto.response;
 
 import java.util.List;
 
