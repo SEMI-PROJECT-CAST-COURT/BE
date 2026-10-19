@@ -79,4 +79,23 @@ public class SpeakingEntity {
     // 이 발언 뒤 게이지
     @Column(name = "score_after", nullable = false)
     private int scoreAfter;
+
+    /* 판결 때 저장할 발언 (id 는 DB 가 정한다) */
+    public SpeakingEntity(TrialEntity trial, int seq, Stage stage, Side side, Speaker speaker, String content,
+                          boolean issue, boolean evidence, Boolean rebut, boolean novel,
+                          Grade grade, int delta, int scoreAfter) {
+        this.trial = trial;
+        this.seq = seq;
+        this.stage = stage;
+        this.side = side;
+        this.speaker = speaker;
+        this.content = content;
+        this.issue = issue;
+        this.evidence = evidence;
+        this.rebut = rebut;
+        this.novel = novel;
+        this.grade = grade;
+        this.delta = delta;
+        this.scoreAfter = scoreAfter;
+    }
 }

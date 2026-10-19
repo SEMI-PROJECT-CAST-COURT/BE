@@ -65,4 +65,18 @@ public class TrialEntity {
     @Convert(converter = CaseSnapshotConverter.class)
     @Column(name = "case_snapshot", nullable = false)
     private CaseSnapshot caseSnapshot;
+
+    /* 판결 때 저장할 재판 (id 는 DB 가 정한다) */
+    public TrialEntity(Integer workCaseId, Integer userId, Side role, TrialMode mode, List<Integer> cardIds,
+                       int score, int penaltyTier, String judgeSummary, CaseSnapshot caseSnapshot) {
+        this.workCaseId = workCaseId;
+        this.userId = userId;
+        this.role = role;
+        this.mode = mode;
+        this.cardIds = cardIds;
+        this.score = score;
+        this.penaltyTier = penaltyTier;
+        this.judgeSummary = judgeSummary;
+        this.caseSnapshot = caseSnapshot;
+    }
 }
