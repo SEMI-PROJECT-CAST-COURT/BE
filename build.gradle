@@ -37,10 +37,6 @@ dependencies {
     // Spring JPA
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
-    // Spring Session for JDBC
-    implementation 'org.springframework.boot:spring-boot-starter-session-jdbc'
-    testImplementation 'org.springframework.boot:spring-boot-starter-session-jdbc-test'
-
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

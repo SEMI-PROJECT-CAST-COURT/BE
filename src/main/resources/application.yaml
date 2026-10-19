@@ -54,3 +54,7 @@ springdoc:
   swagger-ui:
     # API를 컨트롤러 순서가 아닌 태그(도메인) 이름순으로 정렬한다.
     tags-sorter: alpha
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: 3600000
