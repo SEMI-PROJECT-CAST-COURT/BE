@@ -1,5 +1,6 @@
 package com.verdict.castcourt.domain.evidencecard.entity;
 
+import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
 import jakarta.persistence.*;
 
 @Entity
@@ -10,9 +11,9 @@ public class EvidenceCardEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "work_case_id")
-//    private int workCaseId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "work_case_id")
+    private WorkCaseEntity workCase;
 
     @Column(name = "side")
     private String side;
@@ -28,8 +29,9 @@ public class EvidenceCardEntity {
 
     public EvidenceCardEntity() {}
 
-    public EvidenceCardEntity(int id, String side, String title, String body, int weight) {
+    public EvidenceCardEntity(int id, WorkCaseEntity workCase, String side, String title, String body, int weight) {
         this.id = id;
+        this.workCase = workCase;
         this.side = side;
         this.title = title;
         this.body = body;
@@ -42,6 +44,14 @@ public class EvidenceCardEntity {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public WorkCaseEntity getWorkCase() {
+        return workCase;
+    }
+
+    public void setWorkCase(WorkCaseEntity workCase) {
+        this.workCase = workCase;
     }
 
     public String getSide() {
