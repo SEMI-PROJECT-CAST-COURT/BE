@@ -50,6 +50,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/signup/admin").hasAuthority("SUPER_ADMIN")
                     .requestMatchers(HttpMethod.GET, "/account/admin").hasAuthority("SUPER_ADMIN")
                     .requestMatchers(HttpMethod.DELETE, "/admin/{id}").hasAuthority("SUPER_ADMIN")
+                    // work_case
+                    .requestMatchers(HttpMethod.GET, "/api/admin/cases").hasAnyAuthority("SUPER_ADMIN", "ADMIN")
                     .anyRequest().authenticated()
             )
             .exceptionHandling(exception ->
