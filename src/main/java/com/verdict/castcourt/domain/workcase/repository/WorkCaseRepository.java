@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Integer> { ;
+public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Integer> {
 
     List<WorkCaseEntity> getWorkCasesByWorkId(Integer workId);
 
