@@ -5,7 +5,7 @@ import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
 import java.util.List;
 
 public record WorkCaseDetailResponseDTO(
-    long workId,
+    int workId,
     String question,
     String suspect,
     String victim,
