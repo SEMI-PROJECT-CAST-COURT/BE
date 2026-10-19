@@ -1,5 +1,6 @@
 package com.verdict.castcourt.domain.account.service;
 
+import com.verdict.castcourt.domain.account.dto.AccountDTO;
 import com.verdict.castcourt.domain.account.dto.SignupDTO;
 import com.verdict.castcourt.domain.account.dto.LoginRequestDTO;
 import com.verdict.castcourt.domain.account.dto.LoginResponseDTO;
@@ -10,9 +11,12 @@ import com.verdict.castcourt.global.exception.ErrorCode;
 import com.verdict.castcourt.global.security.CustomUserDetails;
 import com.verdict.castcourt.global.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class AccountService {
@@ -81,6 +85,17 @@ public class AccountService {
         account.setAuthority(authority);
 
         accountRepository.save(account);
+    }
+
+    // 관리자 계정 조회
+    public List<AccountDTO> findAllAdminAccounts() {
+         List<AccountEntity> accounts = accountRepository.findAll(Sort.by("id"));
+
+         return accounts
+                    .stream()
+                    .filter(a -> !a.getAuthority().equals("USER"))
+                    .map(a -> new AccountDTO(a.getUsername(), a.getNickname(), a.isUsage()))
+                    .toList();
     }
 
     // 관리자 계정 삭제
