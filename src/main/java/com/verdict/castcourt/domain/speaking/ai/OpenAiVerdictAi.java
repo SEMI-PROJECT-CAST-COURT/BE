@@ -37,8 +37,9 @@ public class OpenAiVerdictAi implements VerdictAi {
         );
 
         String summary = response.output().path("summary").asString("").strip();
+        // 총평이 비면 명세의 판결 받기 502 코드로 알린다
         if (summary.isEmpty()) {
-            throw new BusinessException(ErrorCode.AI_JUDGE_FAILED);
+            throw new BusinessException(ErrorCode.AI_UPSTREAM_ERROR);
         }
         // AI 가 길이 지시를 넘겨도 DB 저장(7장)이 실패하지 않게 컬럼 길이에서 자른다
         if (summary.length() > SUMMARY_COLUMN_LENGTH) {
