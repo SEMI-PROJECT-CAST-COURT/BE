@@ -29,6 +29,7 @@ public class WorkCaseController {
             description = "작품에 속한 사건 목록을 조회합니다. 삭제된 사건은 제외됩니다. " +
                     "각 사건의 변호인(def)/검사(pro) 난이도는 근거 카드 가중치 합의 차이로 계산하며, " +
                     "내 측 합이 상대보다 6 이상 크면 EASY, 6 이상 작으면 HARD, 그 외에는 NORMAL입니다. " +
+                    "각 사건의 형벌표(penalties)를 tier 오름차순으로 함께 응답하며, 형벌표가 없는 사건은 빈 배열입니다. " +
                     "progress는 로그인한 사용자의 진행도(done: 진행한 사건 수, total: 전체 사건 수)입니다. " +
                     "my(내 판결)는 재판 기능 구현 전까지 null로 응답합니다.")
     @GetMapping("/api/works/{workId}/cases")
