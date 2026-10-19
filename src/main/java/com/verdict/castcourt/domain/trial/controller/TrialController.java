@@ -4,6 +4,7 @@ import com.verdict.castcourt.domain.trial.dto.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.TrialStartRequestDTO;
 import com.verdict.castcourt.domain.trial.dto.TrialStartResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.TrialStatusResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.TrialVerdictResponseDTO;
 import com.verdict.castcourt.domain.trial.service.TrialService;
 import com.verdict.castcourt.global.response.SingleResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -70,6 +71,20 @@ public class TrialController {
             @PathVariable String trialId
     ) {
         TrialStatusResponseDTO response = trialService.getTrialStatus(userId, trialId);
+
+        return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
+    }
+
+    // TODO(연결): 로그인이 붙으면 X-User-Id 헤더 대신 로그인 사용자 id 사용
+    @Operation(summary = "판결 받기",
+            description = "최후 변론까지 끝난 재판을 판결하고 DB 에 저장합니다. 저장된 판은 메모리에서 지워져 재판 상태 조회가 404 가 됩니다. " +
+                    "AI 판사 총평 때문에 몇 초 걸릴 수 있습니다.")
+    @PostMapping("/api/trials/{trialId}/verdict")
+    public ResponseEntity<SingleResponse<TrialVerdictResponseDTO>> receiveVerdict(
+            @RequestHeader(name = "X-User-Id", defaultValue = "4") int userId,
+            @PathVariable String trialId
+    ) {
+        TrialVerdictResponseDTO response = trialService.receiveVerdict(userId, trialId);
 
         return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
     }

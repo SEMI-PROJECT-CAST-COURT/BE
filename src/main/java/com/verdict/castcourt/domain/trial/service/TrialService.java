@@ -9,6 +9,7 @@ import com.verdict.castcourt.domain.trial.dto.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.TrialOutcome;
 import com.verdict.castcourt.domain.trial.dto.TrialStartRequestDTO;
 import com.verdict.castcourt.domain.trial.dto.TrialStartResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.TrialVerdictResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;
@@ -16,6 +17,7 @@ import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.repository.MyTrialRow;
 import com.verdict.castcourt.domain.trial.repository.TrialCaseReader;
 import com.verdict.castcourt.domain.trial.repository.TrialRepository;
+import com.verdict.castcourt.domain.trial.rule.ScoreRule;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
 import com.verdict.castcourt.domain.trial.session.TrialSessionStore;
 import com.verdict.castcourt.domain.trial.session.TrialTurnOrder;
@@ -198,6 +200,26 @@ public class TrialService {
         }
 
         return TrialStatusResponseDTO.from(session);
+    }
+
+    /* 판결 받기 (TRL-03) : 검사 → 판사 총평(AI) → 저장(트랜잭션) → 메모리 정리
+     *  startTrial 과 같은 이유로 @Transactional 을 붙이지 않는다. 트랜잭션은 저장(TrialVerdictWriter)에만 건다.
+     *  AI · 저장이 실패하면 메모리의 재판은 그대로 남아서, 같은 요청을 다시 보내면 된다.
+     * */
+    public TrialVerdictResponseDTO receiveVerdict(int userId, String trialId) {
+
+        TrialSession session = checkVerdictable(userId, trialId);
+
+        int penaltyTier = ScoreRule.penaltyTier(session.getScore());
+        String judgeSummary = summarize(session);
+        TrialEntity trial = save(session, penaltyTier, judgeSummary);
+
+        trialSessionStore.remove(session);      // 저장이 끝난 판은 메모리에서 지운다 (이후 재판 상태 조회는 404)
+
+        boolean oppositeAvailable = !trialRepository.existsByUserIdAndWorkCaseIdAndRole(
+                userId, session.getWorkCaseId(), session.getRole().opposite());
+
+        return TrialVerdictResponseDTO.of(trial, oppositeAvailable);
     }
 
     /* 판결 전 검사 : 404 → 403 → 최후 변론까지 끝났는지(400) → 이미 기록이 있는 역할인지(409)
