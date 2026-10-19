@@ -13,7 +13,6 @@ public interface TrialRepository extends JpaRepository<TrialEntity, Integer> {
      *  - 필터 값이 null 이면 그 조건은 건너뛴다
      *  - 승리 조건은 ScoreRule.isWin 과 같다 : 변호인은 형벌 단계 1~3, 검사는 4~6
      *  - work_case · work 엔티티가 아직 없어서 네이티브 SQL 로 is_usage 만 읽는다
-     *  TODO(연결): 사건 · 작품 엔티티가 생기면 JPQL 조인으로 바꿀지 검토
      * */
     @Query(value = """
             SELECT t.id                              AS trialId,
