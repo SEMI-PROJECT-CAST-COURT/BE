@@ -3,6 +3,7 @@ package com.verdict.castcourt.domain.trial.service;
 import com.verdict.castcourt.domain.speaking.entity.Stage;
 import com.verdict.castcourt.domain.trial.dto.TrialStartRequestDTO;
 import com.verdict.castcourt.domain.trial.dto.TrialStartResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.repository.TrialCaseReader;
@@ -22,10 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 /* 재판 시작 · 재판 상태 (DB 없이 사건 조회 · 리포지토리를 가짜로, 보관소는 진짜로) */
@@ -85,6 +83,38 @@ class TrialServiceStartTest {
         givenCase(7);
         when(trialRepository.existsByUserIdAndWorkCaseIdAndRole(4, 7, Side.DEFENSE)).thenReturn(true);
         assertError(ErrorCode.ROLE_ALREADY_RECORDED, () -> trialService.startTrial(4, new TrialStartRequestDTO(7, "DEFENSE", "IRON")));
+    }
+
+    @Test
+    @DisplayName("재판 상태 : 메모리에 없으면 404, 남의 재판이면 403")
+    void statusErrors() {
+        givenCase(7);
+        String trialId = trialService.startTrial(4, new TrialStartRequestDTO(7, "DEFENSE", "IRON")).trialId();
+
+        assertError(ErrorCode.TRIAL_NOT_FOUND, () -> trialService.getTrialStatus(4, "없는-id"));
+        assertError(ErrorCode.TRIAL_ACCESS_DENIED, () -> trialService.getTrialStatus(5, trialId));
+    }
+
+    @Test
+    @DisplayName("재판 상태 : 공방 중이면 카드 · 공방 번호, IRON 은 게이지 · 판정을 숨긴다")
+    void status() {
+        givenCase(7);
+        String trialId = trialService.startTrial(4, new TrialStartRequestDTO(7, "PROSECUTION", "IRON")).trialId();
+        TrialSession session = trialSessionStore.findByTrialId(trialId).orElseThrow();
+        for (int i = 0; i < 4; i++) {           // 모두 진술 2 + 카드 1 의 첫 공방 2 → 다음은 seq 5
+            session.record("발언", true, true, i == 0 ? null : true, true, 10);
+        }
+
+        TrialStatusResponseDTO status = trialService.getTrialStatus(4, trialId);
+
+        assertEquals(Stage.CARD, status.stage());
+        assertEquals(1, status.cardNo());
+        assertEquals(2, status.exchangeNo());
+        assertNull(status.score());
+        assertEquals(4, status.speakings().size());
+        assertNotNull(status.speakings().get(0).content());
+        assertNull(status.speakings().get(0).grade());
+        assertNull(status.speakings().get(0).scoreAfter());
     }
 
     // 사건 caseId : 검사 카드 11~14, 변호인 카드 21~23

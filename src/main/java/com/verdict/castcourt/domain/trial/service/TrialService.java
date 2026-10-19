@@ -1,10 +1,6 @@
 package com.verdict.castcourt.domain.trial.service;
 
-import com.verdict.castcourt.domain.trial.dto.MyTrialDTO;
-import com.verdict.castcourt.domain.trial.dto.MyTrialListDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialOutcome;
-import com.verdict.castcourt.domain.trial.dto.TrialStartRequestDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialStartResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.*;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
@@ -73,7 +69,6 @@ public class TrialService {
         );
         trialSessionStore.save(session);    // 같은 사용자의 이전 판은 덮어쓴다
 
-        // TODO: 6장 6-6 변호인이면 AI 검사 모두 진술을 만들어 응답 openingSpeaking 에 넣는다
         return TrialStartResponseDTO.from(session);
     }
 
@@ -163,5 +158,18 @@ public class TrialService {
         } catch (NumberFormatException e) {
             throw new BusinessException(ErrorCode.INVALID_CURSOR);
         }
+    }
+
+    // 재판 상태 (TRL-02) : 메모리에 없으면 404, 남의 재판이면 403
+    public TrialStatusResponseDTO getTrialStatus(int userId, String trialId) {
+
+        TrialSession session = trialSessionStore.findByTrialId(trialId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRIAL_NOT_FOUND));
+
+        if (session.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TRIAL_ACCESS_DENIED);
+        }
+
+        return TrialStatusResponseDTO.from(session);
     }
 }
