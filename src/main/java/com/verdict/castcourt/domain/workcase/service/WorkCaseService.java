@@ -18,9 +18,9 @@ import java.util.List;
 @Transactional
 public class WorkCaseService {
 
-    @Autowired
     private final WorkCaseRepository workCaseRepository;
 
+    @Autowired
     public WorkCaseService(WorkCaseRepository workCaseRepository) {
         this.workCaseRepository = workCaseRepository;
     }
