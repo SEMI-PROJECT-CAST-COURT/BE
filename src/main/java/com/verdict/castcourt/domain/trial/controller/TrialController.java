@@ -1,7 +1,11 @@
 package com.verdict.castcourt.domain.trial.controller;
 
+import org.springframework.web.bind.annotation.*;
+import com.verdict.castcourt.domain.trial.dto.response.CaseRecordsResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyStatsResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.request.TrialStartRequestDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialRecordResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStartResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialVerdictResponseDTO;
@@ -14,12 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class TrialController {
@@ -82,6 +80,55 @@ public class TrialController {
             @PathVariable String trialId
     ) {
         TrialVerdictResponseDTO response = trialService.receiveVerdict(user.getId(), trialId);
+
+        return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
+    }
+
+    @Operation(summary = "나가기",
+            description = "진행 중 재판을 메모리에서 지웁니다(DB 저장 없음). 이미 없으면 그대로 204 입니다. " +
+                    "나가기 버튼 · 뒤로 가기 · 새로고침 · 탭 닫기 등 화면을 떠날 때 부릅니다.")
+    @DeleteMapping("/api/trials/{trialId}")
+    public ResponseEntity<Void> exitTrial(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable String trialId
+    ) {
+        trialService.exitTrial(user.getId(), trialId);
+
+        // 204 No Content : 성공했고 돌려줄 본문이 없다 (SingleResponse 로 감싸지 않음)
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "재판 기록",
+            description = "판결이 난 내 재판의 발언 전체와 결정적 순간(keyMoments = 게이지를 가장 크게 움직인 발언 seq 3개)을 조회합니다.")
+    @GetMapping("/api/trials/{trialId}/record")
+    public ResponseEntity<SingleResponse<TrialRecordResponseDTO>> getTrialRecord(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @Parameter(description = "판결 받기 응답의 trialId (DB id)") @PathVariable Integer trialId
+    ) {
+        TrialRecordResponseDTO response = trialService.getTrialRecord(user.getId(), trialId);
+
+        return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
+    }
+
+    @Operation(summary = "사건 기록 요약",
+            description = "이 사건에서 내가 끝낸 역할별 기록입니다. 기록이 없는 역할은 null, latest 는 나중에 끝낸 역할입니다.")
+    @GetMapping("/api/cases/{caseId}/records")
+    public ResponseEntity<SingleResponse<CaseRecordsResponseDTO>> getCaseRecords(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable Integer caseId
+    ) {
+        CaseRecordsResponseDTO response = trialService.getCaseRecords(user.getId(), caseId);
+
+        return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
+    }
+
+    @Operation(summary = "내 통계",
+            description = "판결이 난 내 재판 전체의 역할별 승패와 형벌 단계(1~6)별 횟수입니다.")
+    @GetMapping("/api/users/me/stats")
+    public ResponseEntity<SingleResponse<MyStatsResponseDTO>> getMyStats(
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        MyStatsResponseDTO response = trialService.getMyStats(user.getId());
 
         return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
     }

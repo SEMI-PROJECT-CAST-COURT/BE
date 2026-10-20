@@ -1,8 +1,8 @@
 package com.verdict.castcourt.domain.speaking.service;
 
-import com.verdict.castcourt.domain.speaking.ai.JudgeAi;
-import com.verdict.castcourt.domain.speaking.ai.JudgeResult;
-import com.verdict.castcourt.domain.speaking.ai.OpponentAi;
+import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
+import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
+import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingErrorEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingJudgeEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.request.SpeakingRequestDTO;
@@ -22,6 +22,7 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Instant;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
@@ -75,6 +76,8 @@ public class SpeakingService {
         if (!session.tryStartTurn()) {
             throw new BusinessException(ErrorCode.SPEAKING_NOT_YOUR_TURN);
         }
+
+        session.touch(Instant.now());      // 발언 제출도 활동으로 본다 (30분 무활동 정리 기준)
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
 
@@ -249,4 +252,4 @@ public class SpeakingService {
             super(new IOException("브라우저가 연결을 끊었다"));
         }
     }
-}
+}

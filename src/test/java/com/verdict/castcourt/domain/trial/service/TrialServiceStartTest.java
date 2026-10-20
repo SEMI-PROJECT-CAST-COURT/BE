@@ -2,7 +2,7 @@ package com.verdict.castcourt.domain.trial.service;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
-import com.verdict.castcourt.domain.speaking.ai.JudgeResult;
+import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
 import com.verdict.castcourt.domain.speaking.entity.Stage;

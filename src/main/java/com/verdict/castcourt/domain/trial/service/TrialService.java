@@ -1,13 +1,18 @@
 package com.verdict.castcourt.domain.trial.service;
 
-import com.verdict.castcourt.domain.speaking.ai.VerdictAi;
+import com.verdict.castcourt.domain.speaking.ai.model.VerdictAi;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
+import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
+import com.verdict.castcourt.domain.speaking.repository.SpeakingRepository;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
+import com.verdict.castcourt.domain.trial.dto.response.CaseRecordsResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyStatsResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialDTO;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.request.TrialOutcome;
 import com.verdict.castcourt.domain.trial.dto.request.TrialStartRequestDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialRecordResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStartResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialVerdictResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
@@ -46,6 +51,7 @@ public class TrialService {
     private final SpeakingService speakingService;     // 변호인 시작 때 AI 검사 모두 진술
     private final VerdictAi verdictAi;                 // 판사 총평
     private final TrialVerdictWriter trialVerdictWriter;   // 판결 저장 트랜잭션
+    private final SpeakingRepository speakingRepository;   // 재판 기록의 발언 읽기
 
     @Autowired
     public TrialService(TrialRepository trialRepository,
@@ -53,13 +59,15 @@ public class TrialService {
                         TrialSessionStore trialSessionStore,
                         SpeakingService speakingService,
                         VerdictAi verdictAi,
-                        TrialVerdictWriter trialVerdictWriter) {
+                        TrialVerdictWriter trialVerdictWriter,
+                        SpeakingRepository speakingRepository) {
         this.trialRepository = trialRepository;
         this.trialCaseReader = trialCaseReader;
         this.trialSessionStore = trialSessionStore;
         this.speakingService = speakingService;
         this.verdictAi = verdictAi;
         this.trialVerdictWriter = trialVerdictWriter;
+        this.speakingRepository = speakingRepository;
     }
 
     /* 재판 시작 (TRL-01) : 검사 → 스냅샷 · 카드 추첨 → (변호인이면 AI 검사 모두 진술) → 메모리에 저장 (DB 저장 없음)
@@ -259,5 +267,51 @@ public class TrialService {
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.ROLE_ALREADY_RECORDED);
         }
+    }
+
+    /* 나가기 (TRL-04) : 메모리의 진행 중 판만 지운다 (trial · speaking 저장 없음)
+     *  이미 없으면(판결 · 30분 정리 · 두 번째 나가기) 그대로 성공으로 본다. 남의 판이면 403
+     * */
+    public void exitTrial(int userId, String trialId) {
+
+        trialSessionStore.findByTrialId(trialId).ifPresent(session -> {
+            if (session.getUserId() != userId) {
+                throw new BusinessException(ErrorCode.TRIAL_ACCESS_DENIED);
+            }
+            trialSessionStore.remove(session);
+        });
+    }
+
+    // 재판 기록 (TRL-05) : 저장된 판이 없으면 404, 남의 판이면 403
+    @Transactional(readOnly = true)
+    public TrialRecordResponseDTO getTrialRecord(int userId, int trialId) {
+
+        TrialEntity trial = trialRepository.findById(trialId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRIAL_RECORD_NOT_FOUND));
+
+        // getUserId() 는 user_id 컬럼을 그대로 읽는 읽기 전용 필드 (계정 테이블을 읽지 않는다)
+        if (trial.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TRIAL_ACCESS_DENIED);
+        }
+
+        List<SpeakingEntity> speakings = speakingRepository.findByTrialIdOrderBySeqAsc(trialId);
+        return TrialRecordResponseDTO.of(trial, speakings);
+    }
+
+    // 사건 기록 요약 (TRL-06) : 사건 행이 없으면 404 (삭제 표시된 사건은 기록을 보여 준다)
+    @Transactional(readOnly = true)
+    public CaseRecordsResponseDTO getCaseRecords(int userId, int caseId) {
+
+        if (!trialCaseReader.existsCase(caseId)) {
+            throw new BusinessException(ErrorCode.CASE_NOT_FOUND);
+        }
+
+        return CaseRecordsResponseDTO.of(trialRepository.findByUserIdAndWorkCaseId(userId, caseId));
+    }
+
+    // 내 통계 (TRL-07)
+    @Transactional(readOnly = true)
+    public MyStatsResponseDTO getMyStats(int userId) {
+        return MyStatsResponseDTO.from(trialRepository.countByRoleAndTier(userId));
     }
 }
