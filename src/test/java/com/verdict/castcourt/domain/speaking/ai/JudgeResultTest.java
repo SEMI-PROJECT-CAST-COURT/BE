@@ -1,5 +1,6 @@
 package com.verdict.castcourt.domain.speaking.ai;
 
+import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
 import org.junit.jupiter.params.ParameterizedTest;

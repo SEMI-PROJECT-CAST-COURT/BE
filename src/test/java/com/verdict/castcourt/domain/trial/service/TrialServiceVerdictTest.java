@@ -2,7 +2,7 @@ package com.verdict.castcourt.domain.trial.service;
 
 import com.verdict.castcourt.domain.account.entity.AccountEntity;
 import com.verdict.castcourt.domain.account.repository.AccountRepository;
-import com.verdict.castcourt.domain.speaking.ai.VerdictAi;
+import com.verdict.castcourt.domain.speaking.ai.model.VerdictAi;
 import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
 import com.verdict.castcourt.domain.speaking.repository.SpeakingRepository;
 import com.verdict.castcourt.domain.trial.dto.response.TrialVerdictResponseDTO;

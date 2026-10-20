@@ -1,8 +1,8 @@
 package com.verdict.castcourt.domain.speaking.controller;
 
-import com.verdict.castcourt.domain.speaking.ai.JudgeAi;
-import com.verdict.castcourt.domain.speaking.ai.JudgeResult;
-import com.verdict.castcourt.domain.speaking.ai.OpponentAi;
+import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
+import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
+import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;

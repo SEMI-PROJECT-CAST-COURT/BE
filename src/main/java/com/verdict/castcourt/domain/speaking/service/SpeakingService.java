@@ -1,8 +1,8 @@
 package com.verdict.castcourt.domain.speaking.service;
 
-import com.verdict.castcourt.domain.speaking.ai.JudgeAi;
-import com.verdict.castcourt.domain.speaking.ai.JudgeResult;
-import com.verdict.castcourt.domain.speaking.ai.OpponentAi;
+import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
+import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
+import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingErrorEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingJudgeEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.request.SpeakingRequestDTO;

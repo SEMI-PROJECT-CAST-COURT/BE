@@ -1,6 +1,6 @@
 package com.verdict.castcourt.domain.trial.service;
 
-import com.verdict.castcourt.domain.speaking.ai.VerdictAi;
+import com.verdict.castcourt.domain.speaking.ai.model.VerdictAi;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
