@@ -1,0 +1,69 @@
+### 1. 관리자 로그인 → 받은 토큰을 adminToken 에 저장 (2 ~ 5번이 이 토큰을 쓴다)
+POST http://localhost:8080/login
+Content-Type: application/json
+
+{ "username": "admin01", "password": "castcourt123!" }
+
+> {%
+    client.global.set("adminToken", response.body.result.token);
+%}
+
+### 2. 근거 카드 1장 (검사 측) : 인증 → CARDS · 기대 결과 = done { json: 카드 1장 }
+# auth 성공은 따로 응답이 없어서 wait-for-server 없이 바로 이어서 보낸다
+WEBSOCKET ws://localhost:8080/ws/admin/evidence-card-draft
+Content-Type: application/json
+
+{ "type": "auth", "token": "{{adminToken}}" }
+===
+{
+  "type": "draft",
+  "step": "CARDS",
+  "workId": 1,
+  "side": "PROSECUTION",
+  "question": "보호와 양육을 제공했더라도, 당사자 몰래 일상을 방송한 책임을 물을 수 있는가?",
+  "suspect": "크리스토프",
+  "victim": "트루먼 버뱅크",
+  "summary": "크리스토프는 트루먼이 방송 출연 사실을 모르는 상태에서 그의 일상을 촬영하고 공개한다. 생활 기반을 제공했다는 사정이 사생활 공개와 상업적 이용을 정당화할 수 있는지가 쟁점이다.",
+  "progress": "T01: 트루먼은 출생 이후 방송의 중심인물로 성장하지만, 촬영과 방송 사실을 알지 못한다.\nT02: 가족과 친구 역할의 배우들이 그의 주변에서 생활하고, 숨겨진 카메라가 일상을 기록한다.\nT03: 방송에는 상품 광고가 결합되며, 트루먼의 생활이 상업적 콘텐츠로 이용된다.\nT04: 크리스토프는 자신이 만든 세계가 트루먼을 보호한다는 취지로 방송을 옹호한다."
+}
+
+### 3. 두 번째 카드 (변호인 측) : 이미 만든 카드를 cards 로 보내면 겹치지 않는 카드가 나와야 한다
+# cards 의 내용은 2번에서 받은 카드로 바꿔 넣어도 된다
+WEBSOCKET ws://localhost:8080/ws/admin/evidence-card-draft
+Content-Type: application/json
+
+{ "type": "auth", "token": "{{adminToken}}" }
+===
+{
+  "type": "draft",
+  "step": "CARDS",
+  "workId": 1,
+  "side": "DEFENSE",
+  "question": "보호와 양육을 제공했더라도, 당사자 몰래 일상을 방송한 책임을 물을 수 있는가?",
+  "suspect": "크리스토프",
+  "victim": "트루먼 버뱅크",
+  "summary": "크리스토프는 트루먼이 방송 출연 사실을 모르는 상태에서 그의 일상을 촬영하고 공개한다. 생활 기반을 제공했다는 사정이 사생활 공개와 상업적 이용을 정당화할 수 있는지가 쟁점이다.",
+  "progress": "T01: 트루먼은 출생 이후 방송의 중심인물로 성장하지만, 촬영과 방송 사실을 알지 못한다.\nT02: 가족과 친구 역할의 배우들이 그의 주변에서 생활하고, 숨겨진 카메라가 일상을 기록한다.\nT03: 방송에는 상품 광고가 결합되며, 트루먼의 생활이 상업적 콘텐츠로 이용된다.\nT04: 크리스토프는 자신이 만든 세계가 트루먼을 보호한다는 취지로 방송을 옹호한다.",
+  "cards": [
+    { "side": "PROSECUTION", "title": "동의 없는 생중계", "body": "트루먼은 출생부터 촬영 사실을 몰랐다. 본인 동의 없이 일상 전체가 방송됐다." },
+    { "side": "DEFENSE", "title": "안전한 생활 기반", "body": "크리스토프는 트루먼에게 집과 일자리, 범죄 없는 마을을 제공했다." }
+  ]
+}
+
+### 4. 요청값 오류 : side 가 틀림 · 기대 결과 = error { status: 400, code: WS_DRAFT_REQUEST_INVALID } · 연결은 유지
+WEBSOCKET ws://localhost:8080/ws/admin/evidence-card-draft
+Content-Type: application/json
+
+{ "type": "auth", "token": "{{adminToken}}" }
+===
+{ "type": "draft", "step": "CARDS", "workId": 1, "side": "JUDGE",
+  "question": "쟁점", "suspect": "피의자", "victim": "피해자", "summary": "개요", "progress": "경과" }
+===
+{ "type": "draft", "step": "CARDS", "workId": 9999, "side": "PROSECUTION",
+  "question": "쟁점", "suspect": "피의자", "victim": "피해자", "summary": "개요", "progress": "경과" }
+
+### 5. 인증 실패 : 잘못된 토큰 · 기대 결과 = 연결이 1008 로 닫힘
+WEBSOCKET ws://localhost:8080/ws/admin/evidence-card-draft
+Content-Type: application/json
+
+{ "type": "auth", "token": "wrong-token" }
