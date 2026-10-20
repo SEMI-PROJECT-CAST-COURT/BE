@@ -7,6 +7,9 @@ import com.verdict.castcourt.domain.evidencecard.service.EvidenceCardService;
 import com.verdict.castcourt.domain.penaltytier.dto.PenaltyTierDTO;
 import com.verdict.castcourt.domain.penaltytier.entity.PenaltyTierEntity;
 import com.verdict.castcourt.domain.penaltytier.service.PenaltyTierService;
+import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
+import com.verdict.castcourt.domain.trial.entity.Side;
+import com.verdict.castcourt.domain.trial.entity.TrialEntity;
 import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseRequestDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.*;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO.ProgressResponse;
@@ -18,6 +21,8 @@ import com.verdict.castcourt.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.*;
+
 
 import java.util.Comparator;
 import java.util.List;
@@ -51,6 +56,7 @@ public class WorkCaseService {
                 .toList();
 
         // 각 사건들의 근거 카드 목록 조회 - caseId로 grouping하여 Map으로 반환
+        // 사건 1개 : 카드 여러 장 → mapping으로 DTO 변환 후 List로 모으고, collectingAndThen으로 그 List를 EvidenceCardResponseDTO로 한 번 더 감쌈
         Map<Integer, EvidenceCardResponseDTO> cardsByCase = workCaseRepository.findEvidenceCardsByWorkId(workId).stream()
                 .collect(Collectors.groupingBy(
                         card -> card.getWorkCase().getId(),
@@ -61,13 +67,24 @@ public class WorkCaseService {
                 ));
 
         // 각 사건들의 형벌표 조회
+        // 사건 1개 : 형벌표 6단계 → 같은 사건의 형벌표를 mapping으로 DTO 변환 후 List로 모음 (꺼낼 때 순서대로 전부 사용)
         Map<Integer, List<PenaltyTierDTO>> penaltiesByCase =
                 workCaseRepository.findPenaltiesByWorkId(workId).stream()
                         .collect(Collectors.groupingBy(
                                 penalty -> penalty.getWorkCase().getId(),           // 사건 아이디
                                 Collectors.mapping(this::toPenaltyTierDTO, Collectors.toList())   // 형벌표 목록
                         ));
-        
+
+        // 각 사건들의 재판 결과 조회
+        // 사건 1개 : 역할별 재판 최대 1건 (UNIQUE(user_id, work_case_id, role)) → List가 아니라 toMap으로 역할을 key로 묶음 (꺼낼 때 역할로 바로 조회)
+        // 같은 key가 두 번 들어오면 toMap은 IllegalStateException(Duplicate key)을 던지므로, 역할당 1건이 보장될 때만 사용
+        Map<Integer, Map<Side, TrialEntity>> trialsByCase =
+                workCaseRepository.findMyTrialsByWorkId(workId, userId).stream()
+                        .collect(Collectors.groupingBy(
+                                TrialEntity::getWorkCaseId,                                      // 사건별
+                                Collectors.toMap(TrialEntity::getRole, trial -> trial)  // 역할별
+                        ));
+
         List<WorkCaseSummaryResponseDTO> cases = workCases.stream()
                 .map(workCase -> {
                     // case 마다 근거카드 리스트 꺼내서 난이도 계산
@@ -76,12 +93,17 @@ public class WorkCaseService {
                             ? new DifficultyResponseDTO(Difficulty.NORMAL, Difficulty.NORMAL)   // 근거 카드 없는 사건
                             : DifficultyResponseDTO.of(cards.getDefenseTotalWeight(), cards.getProsecutionTotalWeight());
 
+                    // 특정 사건의 재편 결과를 역할별로 묶음
+                    Map<Side, TrialEntity> mine = trialsByCase.getOrDefault(workCase.getId(), Map.of());
+                    
                     return WorkCaseSummaryResponseDTO.of(
                             workCase,
                             difficulty,
                             penaltiesByCase.getOrDefault(workCase.getId(), List.of()),
-                            // TODO: 재판(trial) 구현 후 내 판결 조회로 교체
-                            new MyVerdictsResponse(null, null)
+                            new MyVerdictsResponse(
+                                    toVerdictResponse(mine.get(Side.DEFENSE)),      // 변호사 역할 결과 (티어, 형벌 내용)
+                                    toVerdictResponse(mine.get(Side.PROSECUTION))   // 검사 역할 결과   (티어, 형벌 내용)
+                            )
                     );
                 })
                 .toList();
@@ -182,6 +204,21 @@ public class WorkCaseService {
                 penalty.getTier(),
                 penalty.getSentence()
         );
+    }
+
+    private VerdictResponse toVerdictResponse(TrialEntity trial) {
+
+        // 해당 역할로 판결 난 기록이 없는 경우
+        if(trial == null) return null;
+
+        // 재판 당시 스냅샷의 형벌표에서 해당 단계의 처분 문장 조회
+        String sentence = trial.getCaseSnapshot().penalties().stream()
+                .filter(penalty -> penalty.tier() == trial.getPenaltyTier())
+                .map(CaseSnapshot.Penalty::sentence)
+                .findFirst()
+                .orElse(null);
+        
+        return new VerdictResponse(trial.getPenaltyTier(), sentence);
     }
 
     private WorkCaseEntity dtoToEntity(WorkCaseRequestDTO requestDTO) {
