@@ -52,6 +52,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.DELETE, "/admin/{id}").hasAuthority("SUPER_ADMIN")
                     // work_case
                     .requestMatchers("/api/admin/cases", "/api/admin/cases/**").hasAnyAuthority("SUPER_ADMIN", "ADMIN")
+                    // websocket : 핸드셰이크에는 토큰을 붙일 수 없어 열어 두고, 첫 메시지 auth 로 핸들러가 인증한다
+                    .requestMatchers("/ws/**").permitAll()
                     .anyRequest().authenticated()
             )
             .exceptionHandling(exception ->
