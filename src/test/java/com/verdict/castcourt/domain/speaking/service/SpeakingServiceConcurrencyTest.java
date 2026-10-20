@@ -1,6 +1,6 @@
 package com.verdict.castcourt.domain.speaking.service;
 
-import com.verdict.castcourt.domain.speaking.dto.SpeakingRequestDTO;
+import com.verdict.castcourt.domain.speaking.dto.request.SpeakingRequestDTO;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.session.TrialSession;

@@ -1,10 +1,10 @@
 package com.verdict.castcourt.domain.trial.controller;
 
-import com.verdict.castcourt.domain.trial.dto.MyTrialListDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialStartRequestDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialStartResponseDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialStatusResponseDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialVerdictResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
+import com.verdict.castcourt.domain.trial.dto.request.TrialStartRequestDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialStartResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialVerdictResponseDTO;
 import com.verdict.castcourt.domain.trial.service.TrialService;
 import com.verdict.castcourt.global.response.SingleResponse;
 import com.verdict.castcourt.global.security.CustomUserDetails;

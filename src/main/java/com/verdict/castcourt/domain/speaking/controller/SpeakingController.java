@@ -1,6 +1,6 @@
 package com.verdict.castcourt.domain.speaking.controller;
 
-import com.verdict.castcourt.domain.speaking.dto.SpeakingRequestDTO;
+import com.verdict.castcourt.domain.speaking.dto.request.SpeakingRequestDTO;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
 import com.verdict.castcourt.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;

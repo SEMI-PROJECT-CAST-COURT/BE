@@ -1,15 +1,15 @@
 package com.verdict.castcourt.domain.trial.service;
 
 import com.verdict.castcourt.domain.speaking.ai.VerdictAi;
-import com.verdict.castcourt.domain.trial.dto.TrialStatusResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
-import com.verdict.castcourt.domain.trial.dto.MyTrialDTO;
-import com.verdict.castcourt.domain.trial.dto.MyTrialListDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialOutcome;
-import com.verdict.castcourt.domain.trial.dto.TrialStartRequestDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialStartResponseDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialVerdictResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyTrialDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
+import com.verdict.castcourt.domain.trial.dto.request.TrialOutcome;
+import com.verdict.castcourt.domain.trial.dto.request.TrialStartRequestDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialStartResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialVerdictResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;
@@ -25,6 +25,7 @@ import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -115,11 +116,11 @@ public class TrialService {
         // 다음 페이지가 있는지 알려고 1개 더 읽는다
         List<MyTrialRow> rows = trialRepository.findMyTrials(
                 userId,
-                roleFilter == null ? null : roleFilter.name(),
+                roleFilter,
                 outcomeFilter == null ? null : outcomeFilter.name(),
                 workId,
                 lastTrialId,
-                MY_TRIAL_PAGE_SIZE + 1
+                Limit.of(MY_TRIAL_PAGE_SIZE + 1)
         );
 
         boolean hasNext = rows.size() > MY_TRIAL_PAGE_SIZE;

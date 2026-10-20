@@ -1,8 +1,8 @@
 package com.verdict.castcourt.domain.speaking.service;
 
-import com.verdict.castcourt.domain.speaking.dto.SpeakingStageEventDTO;
-import com.verdict.castcourt.domain.speaking.dto.SpeakingTextEventDTO;
-import com.verdict.castcourt.domain.speaking.dto.SpeakingTurnDoneEventDTO;
+import com.verdict.castcourt.domain.speaking.dto.response.SpeakingStageEventDTO;
+import com.verdict.castcourt.domain.speaking.dto.response.SpeakingTextEventDTO;
+import com.verdict.castcourt.domain.speaking.dto.response.SpeakingTurnDoneEventDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.entity.Stage;
 import com.verdict.castcourt.domain.trial.entity.Side;
