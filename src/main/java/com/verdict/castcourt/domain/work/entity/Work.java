@@ -43,8 +43,8 @@ public class Work {
     public String getSummary() { return summary; }
     public String getPoster() { return poster; }
 
-
-
+    public void deactivate() { this.isUsage = false; }
+    public boolean isUsage() { return isUsage; }
 
     public void update(Category category, String title, String author, LocalDate releasedOn,
                        String summary, String poster) {

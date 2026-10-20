@@ -13,4 +13,8 @@ public interface WorkRepository extends JpaRepository<Work, Integer> {
             "update Work w set w.category = :targetCategory where w.category.id = :sourceId")
     int moveToCategory(@org.springframework.data.repository.query.Param("sourceId") Integer sourceId,
                        @org.springframework.data.repository.query.Param("targetCategory") com.verdict.castcourt.domain.category.entity.Category targetCategory);
-}
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query(
+            value = "UPDATE work_case SET is_usage = FALSE WHERE work_id = :workId AND is_usage = TRUE",
+            nativeQuery = true)
+    int hideCasesByWorkId(@org.springframework.data.repository.query.Param("workId") Integer workId);}

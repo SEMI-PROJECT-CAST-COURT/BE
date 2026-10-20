@@ -14,11 +14,11 @@ import java.util.Set;
 public class AdminWorkController {
     private final WorkCreateService service;
     private final WorkUpdateService updateService;
-
-    public AdminWorkController(WorkCreateService service, WorkUpdateService updateService) {
+    private final WorkDeleteService deleteService;
+    public AdminWorkController(WorkCreateService service, WorkUpdateService updateService, WorkDeleteService deleteService) {
         this.service = service;
         this.updateService = updateService;
-
+        this.deleteService = deleteService;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -39,6 +39,13 @@ public class AdminWorkController {
         requireAdmin(authentication);
         updateService.update(workId, data, poster);
         return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{workId}")
+    public ResponseEntity<Void> delete(@PathVariable Integer workId, Authentication authentication) {
+        requireAdmin(authentication);
+        deleteService.delete(workId);
+        return ResponseEntity.noContent().build();
     }
 
     private void requireAdmin(Authentication authentication) {

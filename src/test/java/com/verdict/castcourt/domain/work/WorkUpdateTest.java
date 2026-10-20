@@ -116,7 +116,7 @@ class WorkUpdateTest {
 
     @Test void controllerReturnsEmpty200AndChecksRoles() {
         var updates = mock(WorkUpdateService.class);
-        var controller = new AdminWorkController(mock(WorkCreateService.class), updates);
+        var controller = new AdminWorkController(mock(WorkCreateService.class), updates, mock(WorkDeleteService.class));
         assertEquals(401, assertThrows(WorkListException.class,
                 () -> controller.update(1, request("수정", null), null, null)).getStatus());
         var user = new UsernamePasswordAuthenticationToken("user", "",
