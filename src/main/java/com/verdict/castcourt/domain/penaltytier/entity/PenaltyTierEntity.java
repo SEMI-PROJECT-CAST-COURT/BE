@@ -23,18 +23,14 @@ public class PenaltyTierEntity {
 
     public PenaltyTierEntity() {}
 
-    public PenaltyTierEntity(int id, int tier, String sentence) {
-        this.id = id;
+    public PenaltyTierEntity(WorkCaseEntity workCase, int tier, String sentence) {
+        this.workCase = workCase;
         this.tier = tier;
         this.sentence = sentence;
     }
 
     public int getId() {
         return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
     }
 
     public WorkCaseEntity getWorkCase() {
