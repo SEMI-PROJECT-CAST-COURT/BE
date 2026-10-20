@@ -36,8 +36,8 @@ class TrialRepositoryTest {
     void findDummyTrial() {
         TrialEntity trial = trialRepository.findById(1).orElseThrow();
 
-        assertEquals(4, trial.getUserId());
-        assertEquals(7, trial.getWorkCaseId());
+        assertEquals(4, trial.getUser().getId());
+        assertEquals(7, trial.getWorkCase().getId());
         assertEquals(Side.DEFENSE, trial.getRole());
         assertEquals(TrialMode.CHICKEN, trial.getMode());
         assertEquals(List.of(40, 42), trial.getCardIds());

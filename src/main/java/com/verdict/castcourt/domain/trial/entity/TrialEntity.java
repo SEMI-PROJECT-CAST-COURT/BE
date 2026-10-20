@@ -1,13 +1,18 @@
 package com.verdict.castcourt.domain.trial.entity;
 
+import com.verdict.castcourt.domain.account.entity.AccountEntity;
+import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -28,11 +33,23 @@ public class TrialEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // 다른 팀원의 엔티티(WorkCase, Account)를 쓰지 않고 id 숫자만 들고 있는다
-    @Column(name = "work_case_id", nullable = false)
+    // 재판한 사건 (재판 N : 1 사건 · 필요할 때만 읽어 오도록 LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "work_case_id", nullable = false)
+    private WorkCaseEntity workCase;
+
+    // 재판한 사용자 (재판 N : 1 계정)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private AccountEntity user;
+
+    /* 같은 컬럼의 id 숫자 (읽기 전용 · 저장은 위 연관관계가 한다)
+     *  사건 · 회원을 읽어 오지 않고 id 만 쓰는 곳(재판 시작 409 검사, 팀원 WorkCaseService · WorkCaseRepository)을 위해 둔다.
+     * */
+    @Column(name = "work_case_id", insertable = false, updatable = false)
     private Integer workCaseId;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id", insertable = false, updatable = false)
     private Integer userId;
 
     // 사용자가 맡은 역할
@@ -67,10 +84,10 @@ public class TrialEntity {
     private CaseSnapshot caseSnapshot;
 
     /* 판결 때 저장할 재판 (id 는 DB 가 정한다) */
-    public TrialEntity(Integer workCaseId, Integer userId, Side role, TrialMode mode, List<Integer> cardIds,
+    public TrialEntity(WorkCaseEntity workCase, AccountEntity user, Side role, TrialMode mode, List<Integer> cardIds,
                        int score, int penaltyTier, String judgeSummary, CaseSnapshot caseSnapshot) {
-        this.workCaseId = workCaseId;
-        this.userId = userId;
+        this.workCase = workCase;
+        this.user = user;
         this.role = role;
         this.mode = mode;
         this.cardIds = cardIds;
