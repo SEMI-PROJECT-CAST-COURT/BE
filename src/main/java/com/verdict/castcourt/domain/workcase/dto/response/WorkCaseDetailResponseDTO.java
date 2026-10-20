@@ -26,7 +26,7 @@ public record WorkCaseDetailResponseDTO(
         int pro = cards.getProsecutionTotalWeight();
 
         return new WorkCaseDetailResponseDTO(
-                workCase.getWorkId(),
+                workCase.getWork().getId(),
                 workCase.getQuestion(), workCase.getSuspect(), workCase.getVictim(),
                 workCase.getSummary(), workCase.getProgress(),
                 cards.getEvidenceCards(),

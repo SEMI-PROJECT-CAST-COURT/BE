@@ -1,5 +1,6 @@
 package com.verdict.castcourt.domain.workcase.entity;
 
+import com.verdict.castcourt.domain.work.entity.Work;
 import jakarta.persistence.*;
 
 @Entity
@@ -11,8 +12,12 @@ public class WorkCaseEntity {
     @Column(name = "id")
     private int id;                    // PK
 
-    @Column(name = "work_id")
-    private int workId;                // 작품 id TODO: (추후 Work 개발 시, 참조 관계로 변경)
+//    @Column(name = "work_id")
+//    private int workId;                // 작품 id TODO: (추후 Work 개발 시, 참조 관계로 변경)
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "work_id")
+    private Work work;
 
     @Column(name = "question")
     private String question;                    // 쟁점
@@ -34,8 +39,8 @@ public class WorkCaseEntity {
 
     public WorkCaseEntity() {}
 
-    public WorkCaseEntity(int workId, String question, String suspect, String victim, String summary, String progress, boolean isUsage) {
-        this.workId = workId;
+    public WorkCaseEntity(Work work, String question, String suspect, String victim, String summary, String progress, boolean isUsage) {
+        this.work = work;
         this.question = question;
         this.suspect = suspect;
         this.victim = victim;
@@ -48,8 +53,8 @@ public class WorkCaseEntity {
         return id;
     }
 
-    public int getWorkId() {
-        return workId;
+    public Work getWork() {
+        return work;
     }
 
     public String getQuestion() {

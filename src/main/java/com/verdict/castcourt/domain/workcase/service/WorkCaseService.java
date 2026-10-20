@@ -11,6 +11,7 @@ import com.verdict.castcourt.domain.penaltytier.service.PenaltyTierService;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;
+import com.verdict.castcourt.domain.work.entity.Work;
 import com.verdict.castcourt.domain.work.repository.WorkRepository;
 import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseRequestDTO;
 import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseUpdateDTO;
@@ -183,11 +184,11 @@ public class WorkCaseService {
         validateCase(requestDTO);
 
         // 작품 존재 여부 확인
-        workRepository.findActiveById(requestDTO.workId())
+        Work work = workRepository.findActiveById(requestDTO.workId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.WORK_NOT_FOUND));
 
         // 사건 등록
-        WorkCaseEntity workCase = dtoToEntity(requestDTO);
+        WorkCaseEntity workCase = dtoToEntity(work, requestDTO);
         WorkCaseEntity savedWorkCase = workCaseRepository.save(workCase);
 
         // 근거 카드 등록
@@ -268,10 +269,10 @@ public class WorkCaseService {
         return new VerdictResponse(trial.getPenaltyTier(), sentence);
     }
 
-    private WorkCaseEntity dtoToEntity(WorkCaseRequestDTO requestDTO) {
+    private WorkCaseEntity dtoToEntity(Work work, WorkCaseRequestDTO requestDTO) {
 
         return new WorkCaseEntity(
-                requestDTO.workId(),
+                work,
                 requestDTO.question(),
                 requestDTO.suspect(),
                 requestDTO.victim(),
