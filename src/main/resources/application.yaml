@@ -53,3 +53,10 @@ springdoc:
 jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: 3600000
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  base-url: https://api.openai.com/v1
+  model: gpt-6-luna
+  max-output-tokens: 1000
+  reasoning-effort: none
