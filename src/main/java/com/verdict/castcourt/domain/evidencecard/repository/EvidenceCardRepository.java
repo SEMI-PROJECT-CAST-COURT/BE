@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface EvidenceCardRepository extends JpaRepository<EvidenceCardEntity, Integer> {
     List<EvidenceCardEntity> findByWorkCaseId(int workCaseId);
+    List<EvidenceCardEntity> findByIdInAndWorkCaseId(List<Integer> ids, int workCaseId);
 }
