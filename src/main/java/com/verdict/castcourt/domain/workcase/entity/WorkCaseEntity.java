@@ -75,4 +75,12 @@ public class WorkCaseEntity {
     public boolean isUsage() {
         return isUsage;
     }
+
+    public void update(String question, String suspect, String victim, String summary, String progress) {
+        if(question != null) this.question = question;
+        if(suspect != null) this.suspect = suspect;
+        if(victim != null) this.victim = victim;
+        if(summary != null) this.summary = summary;
+        if(progress != null) this.progress = progress;
+    }
 }
