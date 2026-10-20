@@ -2,6 +2,7 @@ package com.verdict.castcourt.domain.workcase.service;
 
 import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardDTO;
 import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardResponseDTO;
+import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardUpdateDTO;
 import com.verdict.castcourt.domain.evidencecard.entity.EvidenceCardEntity;
 import com.verdict.castcourt.domain.evidencecard.service.EvidenceCardService;
 import com.verdict.castcourt.domain.penaltytier.dto.PenaltyTierDTO;
@@ -10,7 +11,9 @@ import com.verdict.castcourt.domain.penaltytier.service.PenaltyTierService;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;
+import com.verdict.castcourt.domain.work.repository.WorkRepository;
 import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseRequestDTO;
+import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseUpdateDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.*;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO.ProgressResponse;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.MyVerdictsResponse;
@@ -25,8 +28,10 @@ import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryRespons
 
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,14 +39,17 @@ import java.util.stream.Collectors;
 public class WorkCaseService {
 
     private final WorkCaseRepository workCaseRepository;
+    private final WorkRepository workRepository;
     private final PenaltyTierService penaltyTierService;
     private final EvidenceCardService evidenceCardService;
 
     @Autowired
     public WorkCaseService(WorkCaseRepository workCaseRepository,
+                           WorkRepository workRepository,
                            PenaltyTierService penaltyTierService,
                            EvidenceCardService evidenceCardService) {
         this.workCaseRepository = workCaseRepository;
+        this.workRepository = workRepository;
         this.penaltyTierService = penaltyTierService;
         this.evidenceCardService = evidenceCardService;
     }
@@ -174,6 +182,10 @@ public class WorkCaseService {
         // 사건 입력값 검증
         validateCase(requestDTO);
 
+        // 작품 존재 여부 확인
+        workRepository.findActiveById(requestDTO.workId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.WORK_NOT_FOUND));
+
         // 사건 등록
         WorkCaseEntity workCase = dtoToEntity(requestDTO);
         WorkCaseEntity savedWorkCase = workCaseRepository.save(workCase);
@@ -185,6 +197,29 @@ public class WorkCaseService {
         penaltyTierService.savePenaltyTier(savedWorkCase, requestDTO.penalties());
 
         return savedWorkCase.getId();
+    }
+
+    /* 사건 수정 */
+    public void updateWorkCase(int caseId, WorkCaseUpdateDTO requestDTO) {
+
+        validateCase(requestDTO);
+        
+        // 사건 존재 여부 확인
+        WorkCaseEntity workCase = workCaseRepository.findById(caseId)
+                .filter(WorkCaseEntity::isUsage)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CASE_NOT_FOUND));
+
+        workCase.update(
+                requestDTO.question(), requestDTO.suspect(),
+                requestDTO.victim(), requestDTO.summary(), requestDTO.progress()
+        );
+
+        // 삭제할 근거카드 목록 - Integer 배열
+        evidenceCardService.deleteEvidenceCards(caseId, requestDTO.deletedCardIds());
+        // 수정할 근거카드 목록 - cards
+        evidenceCardService.updateEvidenceCards(caseId, requestDTO.cards());
+        // 형벌표 수정
+        penaltyTierService.updatePenaltyTiers(caseId, requestDTO.penalties());
     }
 
     private EvidenceCardDTO toEvidenceCardDTO(EvidenceCardEntity card) {
@@ -234,9 +269,8 @@ public class WorkCaseService {
         );
     }
 
+    // 사건 등록의 입력값 검증
     private void validateCase(WorkCaseRequestDTO requestDTO) {
-
-        // TODO: 작품 존재 여부 체크
 
         // 유효하지 않은 작품 id
         if(requestDTO.workId() <= 0)
@@ -263,5 +297,41 @@ public class WorkCaseService {
         // progress 길이 초과
         if(requestDTO.progress().length() > 1000)
             throw new BusinessException(ErrorCode.CASE_PROGRESS_TOO_LONG);
+    }
+
+    // 사건 수정의 입력값 검증
+    private void validateCase(WorkCaseUpdateDTO requestDTO) {
+        
+        // null question 또는 길이 초과
+        if (requestDTO.question() == null || requestDTO.question().isBlank() ||
+                requestDTO.question().length() > 100)
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // null suspect 또는 길이 초과
+        if (requestDTO.suspect() == null || requestDTO.suspect().isBlank() ||
+                requestDTO.suspect().length() > 50)
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // null victim 또는 길이 초과
+        if (requestDTO.victim() == null || requestDTO.victim().isBlank() ||
+                requestDTO.victim().length() > 50)
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // null summary 또는 길이 초과
+        if (requestDTO.summary() == null || requestDTO.summary().isBlank() ||
+                requestDTO.summary().length() > 1000)
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // null progress
+        if (requestDTO.progress() == null || requestDTO.progress().isBlank())
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        // progress 길이 초과
+        if (requestDTO.progress().length() > 1000)
+            throw new BusinessException(ErrorCode.CASE_PROGRESS_TOO_LONG);
+        // 수정할 카드와 삭제할 카드가 겹치는 경우
+        if (requestDTO.cards() != null && requestDTO.deletedCardIds() != null) {
+            Set<Integer> deletedIds = new HashSet<>(requestDTO.deletedCardIds());
+            boolean overlapped = requestDTO.cards().stream()
+                    .map(EvidenceCardUpdateDTO::getId)
+                    .anyMatch(deletedIds::contains);
+            if (overlapped)
+                throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        }
     }
 }
