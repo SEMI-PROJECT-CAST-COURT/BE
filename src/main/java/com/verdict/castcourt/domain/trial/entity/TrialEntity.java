@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /* 재판 (trial) : 판결이 난 재판 한 판의 결과
- *  진행 중인 재판은 서버 메모리에 있고, 판결이 나는 순간 이 엔티티로 저장된다. (7장)
+ *  진행 중인 재판은 서버 메모리에 있고, 판결이 나는 순간 이 엔티티로 저장된다.
  * */
 @Entity
 @Table(name = "trial")
@@ -79,4 +79,4 @@ public class TrialEntity {
         this.judgeSummary = judgeSummary;
         this.caseSnapshot = caseSnapshot;
     }
-}
+}

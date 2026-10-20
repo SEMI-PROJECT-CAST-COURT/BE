@@ -15,7 +15,7 @@ public record JudgeResult(
 ) {
 
     /* AI 대답 → 판정 결과
-     *  가짜 · 실제 판사 AI 모두 이 메서드로 만든다. 그래서 ③ 제외와 가중치 규칙이 한 곳에서만 적용된다.
+     *  판사 AI 는 이 메서드로만 판정 결과를 만든다. 그래서 ③ 제외와 가중치 규칙이 한 곳에서만 적용된다.
      *  session 은 아직 이번 발언을 기록하기 전이라 currentTurn() 이 '판정할 발언'의 차례다.
      * */
     public static JudgeResult of(TrialSession session, boolean issue, boolean evidence, boolean rebut,
@@ -42,4 +42,4 @@ public record JudgeResult(
                 .orElseThrow(() -> new IllegalStateException("스냅샷에 없는 카드 : " + cardId))
                 .weight();
     }
-}
+}

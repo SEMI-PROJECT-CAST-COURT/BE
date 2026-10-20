@@ -9,8 +9,8 @@ import java.util.function.Consumer;
 public interface OpponentAi {
 
     /* session.currentTurn() 차례(AI 차례)의 발언을 만든다
-     *  글자 조각이 생길 때마다 onDelta 를 부른다 → 6장에서 SSE opponent_delta 이벤트로 보낸다.
+     *  글자 조각이 생길 때마다 onDelta 를 부른다 → 발언 제출에서 SSE opponent_delta 이벤트로 보낸다.
      *  다 만들면 전체 문장을 돌려준다 → 판정 · 기록에 쓴다.
      * */
     AiResult<String> speak(TrialSession session, Consumer<String> onDelta);
-}
+}

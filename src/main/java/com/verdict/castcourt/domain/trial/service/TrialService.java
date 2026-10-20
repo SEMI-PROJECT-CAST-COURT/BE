@@ -36,15 +36,15 @@ import java.util.UUID;
 @Service
 public class TrialService {
 
-    // 내 재판 목록 한 번에 보여 줄 개수 (명세에 없음 · 팀 확인 필요)
+    // 내 재판 목록 한 번에 보여 줄 개수
     static final int MY_TRIAL_PAGE_SIZE = 10;
 
     private final TrialRepository trialRepository;
     private final TrialCaseReader trialCaseReader;
     private final TrialSessionStore trialSessionStore;
-    private final SpeakingService speakingService;     // 변호인 시작 때 AI 검사 모두 진술 (6-6)
-    private final VerdictAi verdictAi;                 // 판사 총평 (7-2)
-    private final TrialVerdictWriter trialVerdictWriter;   // 판결 저장 트랜잭션 (7-3)
+    private final SpeakingService speakingService;     // 변호인 시작 때 AI 검사 모두 진술
+    private final VerdictAi verdictAi;                 // 판사 총평
+    private final TrialVerdictWriter trialVerdictWriter;   // 판결 저장 트랜잭션
 
     @Autowired
     public TrialService(TrialRepository trialRepository,
@@ -246,7 +246,6 @@ public class TrialService {
 
     /* 판사 총평 (트랜잭션 밖) : AI 를 부르는 몇 초 동안 DB 연결을 붙잡지 않는다
      *  실패하면 OpenAiClient 의 502 · 503 · 504 가 그대로 JSON 오류 응답이 된다.
-     *  판사 총평은 ai_call_log 집계 대상이 아니라 usage 는 쓰지 않는다. (명세 v6 비고)
      * */
     String summarize(TrialSession session) {
         return verdictAi.summarize(session).output();

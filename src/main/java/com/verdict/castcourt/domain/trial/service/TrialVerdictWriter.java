@@ -52,8 +52,6 @@ public class TrialVerdictWriter {
                 .toList();
         speakingRepository.saveAll(speakings);
 
-        // TODO(연결) 8-4 이 판의 ai_call_log 행에 speaking_id 연결 (박찬웅)
-
         return trial;
     }
 }

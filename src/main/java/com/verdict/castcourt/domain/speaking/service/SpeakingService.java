@@ -52,7 +52,7 @@ public class SpeakingService {
     static final String EVENT_ERROR = "error";
 
     private final TrialSessionStore trialSessionStore;
-    private final JudgeAi judgeAi;              // 가짜 / 실제 중 설정값으로 정해진 하나 (5장)
+    private final JudgeAi judgeAi;
     private final OpponentAi opponentAi;
     private final TaskExecutor taskExecutor;
 
@@ -199,7 +199,7 @@ public class SpeakingService {
         }
     }
 
-    // 판사 AI 로 판정하고 기록한다 // TODO(연결) 8-4 judge 결과의 usage 를 ai_call_log 에 저장 (role = JUDGE)
+    // 판사 AI 로 판정하고 기록한다
     private TrialSessionSpeaking judgeAndRecord(TrialSession session, String content) {
 
         JudgeResult judged = callAi(() -> judgeAi.judge(session, content).output(), ErrorCode.AI_JUDGE_FAILED);
@@ -207,7 +207,7 @@ public class SpeakingService {
                 judged.weight());
     }
 
-    // 상대 AI 발언 // TODO(연결) 8-4 usage 를 ai_call_log 에 저장 (role = PROSECUTION / DEFENSE)
+    // 상대 AI 발언
     private String speakOpponent(TrialSession session, Consumer<String> onDelta) {
         return callAi(() -> opponentAi.speak(session, onDelta).output(), ErrorCode.AI_OPPONENT_FAILED);
     }
@@ -249,4 +249,4 @@ public class SpeakingService {
             super(new IOException("브라우저가 연결을 끊었다"));
         }
     }
-}
+}

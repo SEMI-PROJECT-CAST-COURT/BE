@@ -56,7 +56,6 @@ public class OpenAiClient {
                         // 환경 변수 OPENAI_API_KEY → openai.api-key (없으면 빈 문자열)
                         @Value("${openai.api-key:${OPENAI_API_KEY:}}") String apiKey,
                         @Value("${openai.base-url:https://api.openai.com/v1}") String baseUrl,
-                        // 모델 이름은 예제 값 · 쓸 수 있는 이름은 OpenAI 공식 문서에서 확인 필요
                         @Value("${openai.model:gpt-6-luna}") String model,
                         // 추론(생각) 정도 · 빈 값이면 보내지 않는다 (추론 기능이 없는 모델용)
                         @Value("${openai.reasoning-effort:none}") String reasoningEffort) {
@@ -241,7 +240,7 @@ public class OpenAiClient {
         return text.toString();
     }
 
-    // 응답의 usage 로 사용량을 만들고 콘솔에 찍는다 // TODO(연결) 8-4 콘솔 대신 ai_call_log 저장
+    // 응답의 usage 로 사용량을 만들고 콘솔에 찍는다
     private AiUsage usage(JsonNode response, LocalDateTime calledAt, long start) {
 
         JsonNode usage = response.path("usage");
@@ -278,4 +277,4 @@ public class OpenAiClient {
                 ? ErrorCode.AI_CONFIGURATION_MISSING
                 : ErrorCode.AI_UPSTREAM_ERROR);
     }
-}
+}

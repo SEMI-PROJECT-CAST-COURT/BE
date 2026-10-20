@@ -25,7 +25,7 @@ public class TrialSessionStore {
         return Optional.ofNullable(sessions.get(userId));
     }
 
-    /* 재판 id 로 찾기 (재판 상태 조회 · 4장)
+    /* 재판 id 로 찾기 (재판 상태 조회)
      *  진행 중 재판은 사용자 수만큼만 있어서 전부 훑어도 충분하다
      * */
     public Optional<TrialSession> findByTrialId(String trialId) {
@@ -38,4 +38,4 @@ public class TrialSessionStore {
     public void remove(TrialSession session) {
         sessions.remove(session.getUserId(), session);
     }
-}
+}
