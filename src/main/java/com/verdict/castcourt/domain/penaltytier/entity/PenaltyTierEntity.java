@@ -56,4 +56,8 @@ public class PenaltyTierEntity {
     public void setSentence(String sentence) {
         this.sentence = sentence;
     }
+
+    public void updateSentence(String sentence) {
+        this.sentence = sentence;
+    }
 }
