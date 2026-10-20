@@ -15,6 +15,9 @@ public interface TrialRepository extends JpaRepository<TrialEntity, Integer> {
     // TrialEntity 의 읽기 전용 userId · workCaseId 필드로 찾는다 (사건 · 계정 테이블을 JOIN 하지 않음)
     boolean existsByUserIdAndWorkCaseIdAndRole(Integer userId, Integer workCaseId, Side role);
 
+    // 이 사용자 · 이 사건의 재판 (역할마다 최대 1개라 0~2개 · 사건 기록 요약)
+    List<TrialEntity> findByUserIdAndWorkCaseId(Integer userId, Integer workCaseId);
+
     /* 내 재판 목록 (trialId 내림차순 · cursor 보다 작은 id 부터 limit 개)
      *  - 필터 값이 null 이면 그 조건은 건너뛴다
      *  - 승리 조건은 ScoreRule.isWin 과 같다 : 변호인은 형벌 단계 1~3, 검사는 4~6

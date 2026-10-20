@@ -55,6 +55,13 @@ public class TrialCaseReader {
         return Optional.of(toSnapshot(workCase.get(), work.get()));
     }
 
+    /* 사건 행이 있는지 · 삭제 표시(is_usage = false)된 사건도 있는 것으로 본다 (사건 기록 요약)
+     *  끝난 재판은 스냅샷으로 보여 주므로, 사건이 지워져도 내 기록은 계속 볼 수 있어야 한다.
+     * */
+    public boolean existsCase(int caseId) {
+        return workCaseRepository.existsById(caseId);
+    }
+
     private CaseSnapshot toSnapshot(WorkCaseEntity workCase, Work work) {
         return new CaseSnapshot(
                 workCase.getId(),

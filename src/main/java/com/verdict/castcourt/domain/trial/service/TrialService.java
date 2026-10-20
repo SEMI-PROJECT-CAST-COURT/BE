@@ -6,6 +6,7 @@ import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
 import com.verdict.castcourt.domain.speaking.repository.SpeakingRepository;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
+import com.verdict.castcourt.domain.trial.dto.response.CaseRecordsResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialDTO;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.request.TrialOutcome;
@@ -294,5 +295,16 @@ public class TrialService {
 
         List<SpeakingEntity> speakings = speakingRepository.findByTrialIdOrderBySeqAsc(trialId);
         return TrialRecordResponseDTO.of(trial, speakings);
+    }
+
+    // 사건 기록 요약 (TRL-06) : 사건 행이 없으면 404 (삭제 표시된 사건은 기록을 보여 준다)
+    @Transactional(readOnly = true)
+    public CaseRecordsResponseDTO getCaseRecords(int userId, int caseId) {
+
+        if (!trialCaseReader.existsCase(caseId)) {
+            throw new BusinessException(ErrorCode.CASE_NOT_FOUND);
+        }
+
+        return CaseRecordsResponseDTO.of(trialRepository.findByUserIdAndWorkCaseId(userId, caseId));
     }
 }
