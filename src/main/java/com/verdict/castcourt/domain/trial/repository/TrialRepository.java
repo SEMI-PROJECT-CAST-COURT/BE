@@ -18,6 +18,17 @@ public interface TrialRepository extends JpaRepository<TrialEntity, Integer> {
     // 이 사용자 · 이 사건의 재판 (역할마다 최대 1개라 0~2개 · 사건 기록 요약)
     List<TrialEntity> findByUserIdAndWorkCaseId(Integer userId, Integer workCaseId);
 
+    // (역할, 형벌 단계)별 판 수 (내 통계) · 판이 없는 칸은 줄이 나오지 않는다
+    @Query("""
+            SELECT t.role        AS role,
+                   t.penaltyTier AS penaltyTier,
+                   COUNT(t)      AS trialCount
+            FROM TrialEntity t
+            WHERE t.userId = :userId
+            GROUP BY t.role, t.penaltyTier
+            """)
+    List<TrialStatRow> countByRoleAndTier(@Param("userId") int userId);
+
     /* 내 재판 목록 (trialId 내림차순 · cursor 보다 작은 id 부터 limit 개)
      *  - 필터 값이 null 이면 그 조건은 건너뛴다
      *  - 승리 조건은 ScoreRule.isWin 과 같다 : 변호인은 형벌 단계 1~3, 검사는 4~6

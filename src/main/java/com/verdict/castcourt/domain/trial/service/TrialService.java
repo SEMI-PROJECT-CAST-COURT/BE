@@ -7,6 +7,7 @@ import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
 import com.verdict.castcourt.domain.speaking.repository.SpeakingRepository;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
 import com.verdict.castcourt.domain.trial.dto.response.CaseRecordsResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyStatsResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialDTO;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.request.TrialOutcome;
@@ -306,5 +307,11 @@ public class TrialService {
         }
 
         return CaseRecordsResponseDTO.of(trialRepository.findByUserIdAndWorkCaseId(userId, caseId));
+    }
+
+    // 내 통계 (TRL-07)
+    @Transactional(readOnly = true)
+    public MyStatsResponseDTO getMyStats(int userId) {
+        return MyStatsResponseDTO.from(trialRepository.countByRoleAndTier(userId));
     }
 }

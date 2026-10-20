@@ -2,6 +2,7 @@ package com.verdict.castcourt.domain.trial.controller;
 
 import org.springframework.web.bind.annotation.*;
 import com.verdict.castcourt.domain.trial.dto.response.CaseRecordsResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyStatsResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.request.TrialStartRequestDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialRecordResponseDTO;
@@ -117,6 +118,17 @@ public class TrialController {
             @PathVariable Integer caseId
     ) {
         CaseRecordsResponseDTO response = trialService.getCaseRecords(user.getId(), caseId);
+
+        return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
+    }
+
+    @Operation(summary = "내 통계",
+            description = "판결이 난 내 재판 전체의 역할별 승패와 형벌 단계(1~6)별 횟수입니다.")
+    @GetMapping("/api/users/me/stats")
+    public ResponseEntity<SingleResponse<MyStatsResponseDTO>> getMyStats(
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        MyStatsResponseDTO response = trialService.getMyStats(user.getId());
 
         return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
     }
