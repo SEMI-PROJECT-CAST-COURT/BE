@@ -11,6 +11,7 @@ import com.verdict.castcourt.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -115,5 +116,17 @@ public class WorkCaseController {
             @RequestBody WorkCaseUpdateDTO requestDTO
     ) {
         workCaseService.updateWorkCase(caseId, requestDTO);
+    }
+
+    /* 사건 삭제 */
+    @Operation(summary = "사건 삭제",
+            description = "관리자가 사건을 삭제합니다. 성공 시 본문 없이 204를 응답합니다. " +
+                    "실제 데이터를 지우지 않고 삭제 여부(is_usage)만 변경하는 소프트 삭제이며, " +
+                    "삭제된 사건은 목록 · 상세 · 재판 준비 조회에서 제외됩니다. 근거 카드와 형벌표, 재판 기록은 그대로 유지됩니다. " +
+                    "사건이 없거나 이미 삭제된 경우 CASE_NOT_FOUND(404)를 응답합니다.")
+    @DeleteMapping("/api/admin/cases/{caseId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteWorkCase(@PathVariable("caseId") int caseId) {
+        workCaseService.deleteWorkCase(caseId);
     }
 }

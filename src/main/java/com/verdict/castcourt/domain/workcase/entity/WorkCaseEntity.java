@@ -83,4 +83,9 @@ public class WorkCaseEntity {
         if(summary != null) this.summary = summary;
         if(progress != null) this.progress = progress;
     }
+
+    // 소프트 삭제 - 행은 남기고 사용 여부만 false로 변경
+    public void delete() {
+        this.isUsage = false;
+    }
 }

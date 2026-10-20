@@ -222,6 +222,18 @@ public class WorkCaseService {
         penaltyTierService.updatePenaltyTiers(caseId, requestDTO.penalties());
     }
 
+    /* 사건 삭제 */
+    public void deleteWorkCase(int caseId) {
+
+        // 사건 존재 여부 확인 - 이미 삭제된 사건도 제외
+        WorkCaseEntity workCase = workCaseRepository.findById(caseId)
+                .filter(WorkCaseEntity::isUsage)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CASE_NOT_FOUND));
+
+        // 소프트 삭제 - 근거 카드 · 형벌표는 남겨두고, 사건 조회 시 isUsage로 걸러짐
+        workCase.delete();
+    }
+
     private EvidenceCardDTO toEvidenceCardDTO(EvidenceCardEntity card) {
 
         return new EvidenceCardDTO(
