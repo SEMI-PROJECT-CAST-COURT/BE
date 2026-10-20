@@ -1,6 +1,7 @@
 package com.verdict.castcourt.domain.evidencecard.dto;
 
 public class EvidenceCardDTO {
+    private int id;
     private String side;
     private String title;
     private String body;
@@ -8,11 +9,16 @@ public class EvidenceCardDTO {
 
     public EvidenceCardDTO() {}
 
-    public EvidenceCardDTO(String side, String title, String body, int weight) {
+    public EvidenceCardDTO(int id, String side, String title, String body, int weight) {
+        this.id = id;
         this.side = side;
         this.title = title;
         this.body = body;
         this.weight = weight;
+    }
+
+    public int getId() {
+        return id;
     }
 
     public String getSide() {

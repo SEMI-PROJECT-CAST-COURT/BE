@@ -27,7 +27,7 @@ public class EvidenceCardService {
     public EvidenceCardResponseDTO findEvidenceCardsByWorkCaseId(int workCaseId) {
         List<EvidenceCardDTO> cards = evidenceCardRepository.findByWorkCaseId(workCaseId)
                 .stream()
-                .map(e -> new EvidenceCardDTO(e.getSide(), e.getTitle(), e.getBody(), e.getWeight()))
+                .map(e -> new EvidenceCardDTO(e.getId(), e.getSide(), e.getTitle(), e.getBody(), e.getWeight()))
                 .toList();
 
         return new EvidenceCardResponseDTO(cards);
