@@ -69,7 +69,7 @@ public class PenaltyTierService {
 
             // sentence: 1~100자
             String sentence = penalty.getSentence();
-            if (sentence == null || sentence.isBlank() || sentence.length() > 100) {
+            if (sentence == null || sentence.isBlank() || sentence.length() > 50) {
                 throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
             }
         }
