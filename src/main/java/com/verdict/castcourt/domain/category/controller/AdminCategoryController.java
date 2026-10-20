@@ -33,6 +33,15 @@ public class AdminCategoryController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/order")
+    public ResponseEntity<Void> reorder(
+            @RequestBody com.verdict.castcourt.domain.category.dto.CategoryOrderRequest request,
+            Authentication authentication) {
+        requireAdmin(authentication);
+        categoryService.reorderCategories(request.categoryIds());
+        return ResponseEntity.ok().build();
+    }
+
     private void requireAdmin(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken) {

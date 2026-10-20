@@ -16,8 +16,13 @@ public class CategoryExceptionHandler {
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorBody> invalidBody() {
+    public ResponseEntity<ErrorBody> invalidBody(jakarta.servlet.http.HttpServletRequest request) {
+        if (request.getRequestURI().endsWith("/categories/order")) {
+            return ResponseEntity.badRequest().body(new ErrorBody(
+                    400, "INVALID_CATEGORY_ORDER", "카테고리 순서 목록을 확인해 주세요."));
+        }
         return ResponseEntity.badRequest().body(new ErrorBody(
                 400, "CATEGORY_NAME_INVALID", "카테고리 이름을 입력해 주세요."));
     }
+
 }
