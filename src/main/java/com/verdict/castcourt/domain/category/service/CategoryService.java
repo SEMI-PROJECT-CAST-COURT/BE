@@ -79,6 +79,32 @@ public class CategoryService {
         }
     }
 
+    @Transactional
+    public void reorderCategories(List<Integer> categoryIds) {
+        if (categoryIds == null || categoryIds.stream().anyMatch(java.util.Objects::isNull)) {
+            throw invalidOrder();
+        }
+        var categories = categoryRepository.findAll();
+        var normalCategories = categories.stream().filter(category -> !category.isFixed())
+                .collect(java.util.stream.Collectors.toMap(Category::getId, category -> category));
+        var requestedIds = new java.util.HashSet<>(categoryIds);
+        if (requestedIds.size() != categoryIds.size()
+                || !requestedIds.equals(normalCategories.keySet())) {
+            throw invalidOrder();
+        }
+        for (int index = 0; index < categoryIds.size(); index++) {
+            normalCategories.get(categoryIds.get(index)).changeOrder(index + 1);
+        }
+        // 미분류의 ID는 요청에 포함하지 않고 서버에서 마지막 순서로 유지.
+        categories.stream().filter(Category::isFixed)
+                .forEach(category -> category.changeOrder(categoryIds.size() + 1));
+        categoryRepository.flush();
+    }
+
+    private CategoryApiException invalidOrder() {
+        return new CategoryApiException(400, "INVALID_CATEGORY_ORDER", "카테고리 순서 목록을 확인해 주세요.");
+    }
+
     private CategoryApiException duplicateName() {
         return new CategoryApiException(400, "CATEGORY_NAME_DUPLICATE", "이미 존재하는 카테고리 이름입니다.");
     }
