@@ -7,7 +7,7 @@ import com.verdict.castcourt.domain.evidencecard.service.EvidenceCardService;
 import com.verdict.castcourt.domain.penaltytier.dto.PenaltyTierDTO;
 import com.verdict.castcourt.domain.penaltytier.entity.PenaltyTierEntity;
 import com.verdict.castcourt.domain.penaltytier.service.PenaltyTierService;
-import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseCreateRequestDTO;
+import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseRequestDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.*;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO.ProgressResponse;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.MyVerdictsResponse;
@@ -147,7 +147,7 @@ public class WorkCaseService {
     }
 
     /* 사건 등록 */
-    public int saveWorkCase(WorkCaseCreateRequestDTO requestDTO) {
+    public int saveWorkCase(WorkCaseRequestDTO requestDTO) {
 
         // 사건 입력값 검증
         validateCase(requestDTO);
@@ -159,7 +159,8 @@ public class WorkCaseService {
         // 근거 카드 등록
         evidenceCardService.saveEvidenceCard(savedWorkCase, requestDTO.cards());
 
-        // TODO: 형벌표 등록
+        // 형벌표 등록
+        penaltyTierService.savePenaltyTier(savedWorkCase, requestDTO.penalties());
 
         return savedWorkCase.getId();
     }
@@ -167,6 +168,7 @@ public class WorkCaseService {
     private EvidenceCardDTO toEvidenceCardDTO(EvidenceCardEntity card) {
 
         return new EvidenceCardDTO(
+                card.getId(),
                 card.getSide(),
                 card.getTitle(),
                 card.getBody(),
@@ -182,7 +184,7 @@ public class WorkCaseService {
         );
     }
 
-    private WorkCaseEntity dtoToEntity(WorkCaseCreateRequestDTO requestDTO) {
+    private WorkCaseEntity dtoToEntity(WorkCaseRequestDTO requestDTO) {
 
         return new WorkCaseEntity(
                 requestDTO.workId(),
@@ -195,7 +197,7 @@ public class WorkCaseService {
         );
     }
 
-    private void validateCase(WorkCaseCreateRequestDTO requestDTO) {
+    private void validateCase(WorkCaseRequestDTO requestDTO) {
 
         // TODO: 작품 존재 여부 체크
 
