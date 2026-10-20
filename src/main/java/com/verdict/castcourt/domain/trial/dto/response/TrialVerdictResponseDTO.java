@@ -1,6 +1,5 @@
 package com.verdict.castcourt.domain.trial.dto.response;
 
-import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;
 import com.verdict.castcourt.domain.trial.rule.ScoreRule;
 
@@ -23,18 +22,9 @@ public record TrialVerdictResponseDTO(
                 trial.getScore(),
                 trial.getPenaltyTier(),
                 ScoreRule.tierTitle(trial.getPenaltyTier()),
-                sentenceOf(trial.getCaseSnapshot(), trial.getPenaltyTier()),
+                trial.getCaseSnapshot().sentenceOf(trial.getPenaltyTier()),
                 trial.getJudgeSummary(),
                 oppositeAvailable
         );
-    }
-
-    // 형벌표에서 그 단계의 처분 문장 · 형벌표에 그 단계가 없으면 null
-    private static String sentenceOf(CaseSnapshot snapshot, int tier) {
-        return snapshot.penalties().stream()
-                .filter(penalty -> penalty.tier() == tier)
-                .map(CaseSnapshot.Penalty::sentence)
-                .findFirst()
-                .orElse(null);
     }
 }
