@@ -1,5 +1,6 @@
 package com.verdict.castcourt.domain.trial.controller;
 
+import org.springframework.web.bind.annotation.*;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.request.TrialStartRequestDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStartResponseDTO;
@@ -14,12 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class TrialController {
@@ -84,5 +79,19 @@ public class TrialController {
         TrialVerdictResponseDTO response = trialService.receiveVerdict(user.getId(), trialId);
 
         return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
+    }
+
+    @Operation(summary = "나가기",
+            description = "진행 중 재판을 메모리에서 지웁니다(DB 저장 없음). 이미 없으면 그대로 204 입니다. " +
+                    "나가기 버튼 · 뒤로 가기 · 새로고침 · 탭 닫기 등 화면을 떠날 때 부릅니다.")
+    @DeleteMapping("/api/trials/{trialId}")
+    public ResponseEntity<Void> exitTrial(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable String trialId
+    ) {
+        trialService.exitTrial(user.getId(), trialId);
+
+        // 204 No Content : 성공했고 돌려줄 본문이 없다 (SingleResponse 로 감싸지 않음)
+        return ResponseEntity.noContent().build();
     }
 }

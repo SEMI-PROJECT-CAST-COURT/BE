@@ -260,4 +260,17 @@ public class TrialService {
             throw new BusinessException(ErrorCode.ROLE_ALREADY_RECORDED);
         }
     }
+
+    /* 나가기 (TRL-04) : 메모리의 진행 중 판만 지운다 (trial · speaking 저장 없음)
+     *  이미 없으면(판결 · 30분 정리 · 두 번째 나가기) 그대로 성공으로 본다. 남의 판이면 403
+     * */
+    public void exitTrial(int userId, String trialId) {
+
+        trialSessionStore.findByTrialId(trialId).ifPresent(session -> {
+            if (session.getUserId() != userId) {
+                throw new BusinessException(ErrorCode.TRIAL_ACCESS_DENIED);
+            }
+            trialSessionStore.remove(session);
+        });
+    }
 }
