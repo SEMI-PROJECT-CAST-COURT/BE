@@ -15,9 +15,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /* 발언 제출 테스트가 함께 쓰는 재료
- *  - JudgeAi · OpponentAi 는 메서드가 하나뿐인 인터페이스라 람다로 바로 만들 수 있다
+ *  - judge · opponent : 람다로 정한 동작을 하는 가짜 AI (Mockito mock 이 호출을 람다에 넘긴다)
  *  - Recorder : SSE 대신 보낸 이벤트를 목록에 모아 두는 sender
  * */
 final class SpeakingTestFixture {
@@ -45,18 +51,35 @@ final class SpeakingTestFixture {
         return session;
     }
 
+    /* judge(session, content) 가 불리면 answer 를 실행하는 판사 */
+    static JudgeAi judge(BiFunction<TrialSession, String, AiResult<JudgeResult>> answer) {
+        JudgeAi judgeAi = mock(JudgeAi.class);
+        when(judgeAi.judge(any(), any())).thenAnswer(call -> answer.apply(call.getArgument(0), call.getArgument(1)));
+        return judgeAi;
+    }
+
+    /* speak(session, onDelta) 가 불리면 answer 를 실행하는 상대 */
+    static OpponentAi opponent(BiFunction<TrialSession, Consumer<String>, AiResult<String>> answer) {
+        OpponentAi opponentAi = mock(OpponentAi.class);
+        when(opponentAi.speak(any(), any())).thenAnswer(call -> answer.apply(call.getArgument(0), call.getArgument(1)));
+        return opponentAi;
+    }
+
     /* 언제나 ①~④ 모두 충족으로 판정하는 판사 */
     static JudgeAi allYesJudge() {
-        return (session, content) -> new AiResult<>(
-                JudgeResult.of(session, true, true, true, true, 10), USAGE);
+        return judge((session, content) -> allYes(session));
+    }
+
+    static AiResult<JudgeResult> allYes(TrialSession session) {
+        return new AiResult<>(JudgeResult.of(session, true, true, true, true, 10), USAGE);
     }
 
     /* 정해진 문장을 한 글자씩 넘기는 상대 */
     static OpponentAi fixedOpponent() {
-        return (session, onDelta) -> {
+        return opponent((session, onDelta) -> {
             OPPONENT_TEXT.codePoints().forEach(c -> onDelta.accept(Character.toString(c)));
             return new AiResult<>(OPPONENT_TEXT, USAGE);
-        };
+        });
     }
 
     /* 작업 실행기 대신 Runnable::run → 맡긴 작업을 그 자리에서 바로 실행한다 (테스트가 기다릴 필요 없음) */

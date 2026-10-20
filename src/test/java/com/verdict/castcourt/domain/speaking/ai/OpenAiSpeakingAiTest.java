@@ -1,9 +1,9 @@
 package com.verdict.castcourt.domain.speaking.ai;
 
 import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
-import com.verdict.castcourt.domain.speaking.ai.model.OpenAiJudgeAi;
-import com.verdict.castcourt.domain.speaking.ai.model.OpenAiOpponentAi;
-import com.verdict.castcourt.domain.speaking.ai.model.OpenAiVerdictAi;
+import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
+import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
+import com.verdict.castcourt.domain.speaking.ai.model.VerdictAi;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
 import com.verdict.castcourt.global.ai.AiResult;
@@ -48,7 +48,7 @@ class OpenAiSpeakingAiTest {
         TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
         givenJson("{\"issue\":true,\"evidence\":false,\"rebut\":false,\"novel\":true,\"weight\":12}");
 
-        JudgeResult result = new OpenAiJudgeAi(openAiClient).judge(session, "내 발언").output();
+        JudgeResult result = new JudgeAi(openAiClient).judge(session, "내 발언").output();
 
         ArgumentCaptor<String> input = ArgumentCaptor.forClass(String.class);
         verify(openAiClient).createJson(anyString(), input.capture(), anyInt(), eq("judge_result"), any());
@@ -67,7 +67,7 @@ class OpenAiSpeakingAiTest {
         givenJson("{\"issue\":true}");
 
         BusinessException e = assertThrows(BusinessException.class,
-                () -> new OpenAiJudgeAi(openAiClient).judge(session, "내 발언"));
+                () -> new JudgeAi(openAiClient).judge(session, "내 발언"));
         assertEquals(ErrorCode.AI_JUDGE_FAILED, e.getErrorCode());
     }
 
@@ -79,7 +79,7 @@ class OpenAiSpeakingAiTest {
                 .thenReturn(new AiResult<>("  ", USAGE));
 
         BusinessException e = assertThrows(BusinessException.class,
-                () -> new OpenAiOpponentAi(openAiClient).speak(session, delta -> { }));
+                () -> new OpponentAi(openAiClient).speak(session, delta -> { }));
         assertEquals(ErrorCode.AI_OPPONENT_FAILED, e.getErrorCode());
 
         ArgumentCaptor<String> instructions = ArgumentCaptor.forClass(String.class);
@@ -96,7 +96,7 @@ class OpenAiSpeakingAiTest {
         TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
         givenJson("{\"summary\":\"총평입니다.\"}");
 
-        String summary = new OpenAiVerdictAi(openAiClient).summarize(session).output();
+        String summary = new VerdictAi(openAiClient).summarize(session).output();
 
         ArgumentCaptor<String> input = ArgumentCaptor.forClass(String.class);
         verify(openAiClient).createJson(anyString(), input.capture(), anyInt(), eq("verdict_summary"), any());

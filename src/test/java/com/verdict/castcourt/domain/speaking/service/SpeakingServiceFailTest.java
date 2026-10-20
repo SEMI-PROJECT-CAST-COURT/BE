@@ -26,9 +26,9 @@ class SpeakingServiceFailTest {
     @Test
     @DisplayName("판정 실패 : AI_UPSTREAM_ERROR → AI_JUDGE_FAILED, 아무것도 반영되지 않는다")
     void judgeFails() {
-        JudgeAi failingJudge = (session, content) -> {
+        JudgeAi failingJudge = SpeakingTestFixture.judge((session, content) -> {
             throw new BusinessException(ErrorCode.AI_UPSTREAM_ERROR);
-        };
+        });
         SpeakingService service = SpeakingTestFixture.service(store, failingJudge, SpeakingTestFixture.fixedOpponent());
         TrialSession session = SpeakingTestFixture.session(Side.PROSECUTION, TrialMode.CHICKEN);
         SpeakingTestFixture.Recorder recorder = new SpeakingTestFixture.Recorder();
@@ -46,10 +46,10 @@ class SpeakingServiceFailTest {
     @Test
     @DisplayName("상대 발언 실패 : judge 는 이미 나갔어도 내 발언까지 반영하지 않는다 (같은 발언을 다시 보낸다)")
     void opponentFails() {
-        OpponentAi failingOpponent = (session, onDelta) -> {
+        OpponentAi failingOpponent = SpeakingTestFixture.opponent((session, onDelta) -> {
             onDelta.accept("재판장님,");
             throw new BusinessException(ErrorCode.AI_UPSTREAM_ERROR);
-        };
+        });
         SpeakingService service = SpeakingTestFixture.service(store, SpeakingTestFixture.allYesJudge(), failingOpponent);
         TrialSession session = SpeakingTestFixture.session(Side.PROSECUTION, TrialMode.CHICKEN);
         SpeakingTestFixture.Recorder recorder = new SpeakingTestFixture.Recorder();
@@ -67,12 +67,12 @@ class SpeakingServiceFailTest {
     void failCount() {
         AtomicInteger calls = new AtomicInteger();
         // 1 · 2번째 판정은 실패, 그 뒤로는 성공
-        JudgeAi flakyJudge = (session, content) -> {
+        JudgeAi flakyJudge = SpeakingTestFixture.judge((session, content) -> {
             if (calls.incrementAndGet() <= 2) {
                 throw new BusinessException(ErrorCode.AI_TIMEOUT);
             }
-            return SpeakingTestFixture.allYesJudge().judge(session, content);
-        };
+            return SpeakingTestFixture.allYes(session);
+        });
         SpeakingService service = SpeakingTestFixture.service(store, flakyJudge, SpeakingTestFixture.fixedOpponent());
         TrialSession session = SpeakingTestFixture.session(Side.PROSECUTION, TrialMode.CHICKEN);
 
@@ -89,12 +89,12 @@ class SpeakingServiceFailTest {
     @Test
     @DisplayName("설정 문제(503)는 retryable false, 예상 못 한 오류는 500")
     void otherErrors() {
-        JudgeAi noKey = (session, content) -> {
+        JudgeAi noKey = SpeakingTestFixture.judge((session, content) -> {
             throw new BusinessException(ErrorCode.AI_CONFIGURATION_MISSING);
-        };
-        JudgeAi broken = (session, content) -> {
+        });
+        JudgeAi broken = SpeakingTestFixture.judge((session, content) -> {
             throw new IllegalStateException("버그");
-        };
+        });
         TrialSession session = SpeakingTestFixture.session(Side.PROSECUTION, TrialMode.CHICKEN);
 
         SpeakingTestFixture.Recorder first = new SpeakingTestFixture.Recorder();

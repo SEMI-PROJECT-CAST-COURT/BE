@@ -3,6 +3,8 @@ package com.verdict.castcourt.domain.trial.service;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
+import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
+import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
 import com.verdict.castcourt.domain.speaking.entity.Stage;
@@ -34,6 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /* 재판 시작 · 재판 상태 (DB 없이 사건 조회 · 리포지토리를 가짜로, 보관소는 진짜로) */
@@ -51,13 +55,10 @@ class TrialServiceStartTest {
 
     private static final AiUsage USAGE = new AiUsage("test-model", 0, 0, LocalDateTime.now(), 0);
 
-    // 진짜 SpeakingService 에 람다 AI 를 넣는다 (판사는 ①~④ 모두 충족, 상대는 정해진 문장 · Runnable::run = 작업을 바로 실행)
+    // 진짜 SpeakingService 에 가짜 AI 를 넣는다 (판사는 ①~④ 모두 충족, 상대는 정해진 문장 · Runnable::run = 작업을 바로 실행)
     @Spy
     private SpeakingService speakingService = new SpeakingService(
-            new TrialSessionStore(),
-            (session, content) -> new AiResult<>(JudgeResult.of(session, true, true, true, true, 10), USAGE),
-            (session, onDelta) -> new AiResult<>("재판장님, 검사 측 모두 진술입니다.", USAGE),
-            Runnable::run);
+            new TrialSessionStore(), allYesJudge(), fixedOpponent(), Runnable::run);
 
     @InjectMocks
     private TrialService trialService;
@@ -170,5 +171,18 @@ class TrialServiceStartTest {
         assertNotNull(status.speakings().get(0).content());
         assertNull(status.speakings().get(0).grade());
         assertNull(status.speakings().get(0).scoreAfter());
+    }
+
+    private static JudgeAi allYesJudge() {
+        JudgeAi judgeAi = mock(JudgeAi.class);
+        when(judgeAi.judge(any(), any())).thenAnswer(call ->
+                new AiResult<>(JudgeResult.of(call.getArgument(0), true, true, true, true, 10), USAGE));
+        return judgeAi;
+    }
+
+    private static OpponentAi fixedOpponent() {
+        OpponentAi opponentAi = mock(OpponentAi.class);
+        when(opponentAi.speak(any(), any())).thenReturn(new AiResult<>("재판장님, 검사 측 모두 진술입니다.", USAGE));
+        return opponentAi;
     }
 }
