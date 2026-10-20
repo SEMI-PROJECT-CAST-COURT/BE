@@ -54,7 +54,7 @@ class TrialServiceVerdictTest {
     private final TrialSessionStore trialSessionStore = new TrialSessionStore();
 
     // 판사 총평 AI : 메서드가 하나뿐인 인터페이스라 람다로 만든다 (테스트마다 바꿔 끼운다)
-    private VerdictAi verdictAi = session -> new AiResult<>(SUMMARY, AiUsage.fake(LocalDateTime.now(), 0));
+    private VerdictAi verdictAi = session -> new AiResult<>(SUMMARY, new AiUsage("test-model", 0, 0, LocalDateTime.now(), 0));
 
     private TrialService trialService;
 

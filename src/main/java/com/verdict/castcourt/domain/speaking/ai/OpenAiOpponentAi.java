@@ -5,16 +5,14 @@ import com.verdict.castcourt.global.ai.AiResult;
 import com.verdict.castcourt.global.ai.OpenAiClient;
 import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.function.Consumer;
 
-/* 실제 상대 AI : OpenAI 스트리밍으로 대사를 받아 글자 조각마다 넘긴다
- *  대사는 흘려보내야 해서 JSON 이 아닌 글로 받는다. (B-1 'JSON 고정'의 예외 · 팀 확인 필요)
+/* 상대 AI : OpenAI 스트리밍으로 대사를 받아 글자 조각마다 넘긴다
+ *  대사는 흘려보내야 해서 JSON 이 아닌 글로 받는다.
  * */
 @Component
-@ConditionalOnProperty(name = "castcourt.ai.mode", havingValue = "openai")
 public class OpenAiOpponentAi implements OpponentAi {
 
     // 한국어 300자 안팎 + 여유
@@ -43,4 +41,4 @@ public class OpenAiOpponentAi implements OpponentAi {
         }
         return new AiResult<>(text, response.usage());
     }
-}
+}
