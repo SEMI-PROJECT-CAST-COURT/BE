@@ -51,6 +51,7 @@ public enum ErrorCode {
     CASE_CARD_COUNT_INSUFFICIENT(HttpStatus.BAD_REQUEST, "CASE_CARD_COUNT_INSUFFICIENT", "검사와 변호인 측 근거 카드를 각각 3장 이상 등록해 주세요."),
     CASE_PROGRESS_TOO_LONG(HttpStatus.BAD_REQUEST, "CASE_PROGRESS_TOO_LONG", "사건 경과는 1000자 이하여야 합니다."),
     CARD_WEIGHT_INVALID(HttpStatus.BAD_REQUEST, "CARD_WEIGHT_INVALID", "근거 카드 가중치는 1~20이어야 합니다."),
+    EVIDENCE_CARD_NOT_FOUND(HttpStatus.NOT_FOUND, "EVIDENCE_CARD_NOT_FOUND", "근거 카드를 찾을 수 없습니다."),
     PENALTY_TIER_COUNT_INVALID(HttpStatus.BAD_REQUEST, "PENALTY_TIER_COUNT_INVALID", "형벌표는 6단계를 모두 등록해야 합니다."),
 
     // ==================== Trial ====================
