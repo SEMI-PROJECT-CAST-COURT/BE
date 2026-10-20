@@ -1,4 +1,4 @@
-package com.verdict.castcourt.domain.speaking.dto;
+package com.verdict.castcourt.domain.speaking.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.verdict.castcourt.domain.speaking.entity.Grade;

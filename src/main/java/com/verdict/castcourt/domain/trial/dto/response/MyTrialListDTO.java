@@ -1,4 +1,4 @@
-package com.verdict.castcourt.domain.trial.dto;
+package com.verdict.castcourt.domain.trial.dto.response;
 
 import java.util.List;
 

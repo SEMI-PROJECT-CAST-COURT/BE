@@ -1,15 +1,15 @@
 package com.verdict.castcourt.domain.trial.service;
 
 import com.verdict.castcourt.domain.speaking.ai.VerdictAi;
-import com.verdict.castcourt.domain.trial.dto.TrialStatusResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
-import com.verdict.castcourt.domain.trial.dto.MyTrialDTO;
-import com.verdict.castcourt.domain.trial.dto.MyTrialListDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialOutcome;
-import com.verdict.castcourt.domain.trial.dto.TrialStartRequestDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialStartResponseDTO;
-import com.verdict.castcourt.domain.trial.dto.TrialVerdictResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyTrialDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
+import com.verdict.castcourt.domain.trial.dto.request.TrialOutcome;
+import com.verdict.castcourt.domain.trial.dto.request.TrialStartRequestDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialStartResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialVerdictResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;
@@ -25,6 +25,7 @@ import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,15 +37,15 @@ import java.util.UUID;
 @Service
 public class TrialService {
 
-    // 내 재판 목록 한 번에 보여 줄 개수 (명세에 없음 · 팀 확인 필요)
+    // 내 재판 목록 한 번에 보여 줄 개수
     static final int MY_TRIAL_PAGE_SIZE = 10;
 
     private final TrialRepository trialRepository;
     private final TrialCaseReader trialCaseReader;
     private final TrialSessionStore trialSessionStore;
-    private final SpeakingService speakingService;     // 변호인 시작 때 AI 검사 모두 진술 (6-6)
-    private final VerdictAi verdictAi;                 // 판사 총평 (7-2)
-    private final TrialVerdictWriter trialVerdictWriter;   // 판결 저장 트랜잭션 (7-3)
+    private final SpeakingService speakingService;     // 변호인 시작 때 AI 검사 모두 진술
+    private final VerdictAi verdictAi;                 // 판사 총평
+    private final TrialVerdictWriter trialVerdictWriter;   // 판결 저장 트랜잭션
 
     @Autowired
     public TrialService(TrialRepository trialRepository,
@@ -115,11 +116,11 @@ public class TrialService {
         // 다음 페이지가 있는지 알려고 1개 더 읽는다
         List<MyTrialRow> rows = trialRepository.findMyTrials(
                 userId,
-                roleFilter == null ? null : roleFilter.name(),
+                roleFilter,
                 outcomeFilter == null ? null : outcomeFilter.name(),
                 workId,
                 lastTrialId,
-                MY_TRIAL_PAGE_SIZE + 1
+                Limit.of(MY_TRIAL_PAGE_SIZE + 1)
         );
 
         boolean hasNext = rows.size() > MY_TRIAL_PAGE_SIZE;
@@ -246,7 +247,6 @@ public class TrialService {
 
     /* 판사 총평 (트랜잭션 밖) : AI 를 부르는 몇 초 동안 DB 연결을 붙잡지 않는다
      *  실패하면 OpenAiClient 의 502 · 503 · 504 가 그대로 JSON 오류 응답이 된다.
-     *  판사 총평은 ai_call_log 집계 대상이 아니라 usage 는 쓰지 않는다. (명세 v6 비고)
      * */
     String summarize(TrialSession session) {
         return verdictAi.summarize(session).output();

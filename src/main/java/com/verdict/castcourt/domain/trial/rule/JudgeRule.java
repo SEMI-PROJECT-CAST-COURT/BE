@@ -7,11 +7,11 @@ import com.verdict.castcourt.domain.trial.session.TrialTurnOrder;
 
 /* 판사 판정 규칙 (기획서 '판정 방식' 표)
  *  판사 AI 의 대답 중 어떤 값을 쓰고 어떤 값을 버릴지 서버가 정한다.
- *  가짜 · 실제 판사 AI 가 같은 규칙을 쓰도록 한 곳에 모았다.
+ *  규칙을 AI 구현 밖 한 곳에 모아 둔다.
  * */
 public final class JudgeRule {
 
-    // 모두 진술 · 최후 변론 가중치 범위 (카드 가중치와 같은 1~20 으로 정함 · 팀 확인 필요)
+    // 모두 진술 · 최후 변론 가중치 범위 (카드 가중치와 같은 1~20 으로 정함)
     public static final int MIN_WEIGHT = 1;
     public static final int MAX_WEIGHT = 20;
 
@@ -43,4 +43,4 @@ public final class JudgeRule {
     public static int clampWeight(int weight) {
         return Math.max(MIN_WEIGHT, Math.min(MAX_WEIGHT, weight));
     }
-}
+}

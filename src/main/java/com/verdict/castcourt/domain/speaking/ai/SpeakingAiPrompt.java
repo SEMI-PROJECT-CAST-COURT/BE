@@ -15,7 +15,7 @@ import java.util.Map;
 
 /* 실제 AI 에 보내는 프롬프트 (노션 '프롬프트' B-1 공통 규칙 · B-3 판사 판정)
  *  instructions(역할 · 규칙)는 상수로, input(사건 · 발언)은 재판 상태로 만든다.
- *  프롬프트 문자열을 한 클래스에 모아서 문구를 고칠 때 이 파일만 보면 된다. (위치는 팀 확인 필요 · 노션 A-7)
+ *  프롬프트 문자열을 한 클래스에 모아서 문구를 고칠 때 이 파일만 보면 된다.
  * */
 public final class SpeakingAiPrompt {
 
@@ -196,4 +196,4 @@ public final class SpeakingAiPrompt {
     private static String sideName(Side side) {
         return side == Side.PROSECUTION ? "검사" : "변호인";
     }
-}
+}

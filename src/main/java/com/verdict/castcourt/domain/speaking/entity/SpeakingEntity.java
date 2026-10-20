@@ -18,7 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /* 발언 (speaking) : 재판 한 판 안의 발언 하나와 판사 판정
- *  판결 때 trial 과 같은 트랜잭션으로 한꺼번에 저장된다. (7장)
+ *  판결 때 trial 과 같은 트랜잭션으로 한꺼번에 저장된다.
  * */
 @Entity
 @Table(name = "speaking")
@@ -98,4 +98,4 @@ public class SpeakingEntity {
         this.delta = delta;
         this.scoreAfter = scoreAfter;
     }
-}
+}

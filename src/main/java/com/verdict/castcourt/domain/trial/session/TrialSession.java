@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /* 진행 중인 재판 한 판 (서버 메모리에만 있고 DB 에는 없다)
- *  판결 때 TrialEntity · SpeakingEntity 로 바뀌어 저장된다. (7장)
- *  발언 처리는 복사본(copy)에서 하고, 성공했을 때만 applyFrom 으로 반영한다. (6장)
+ *  판결 때 TrialEntity · SpeakingEntity 로 바뀌어 저장된다.
+ *  발언 처리는 복사본(copy)에서 하고, 성공했을 때만 applyFrom 으로 반영한다.
  * */
 @Getter
 public class TrialSession {
@@ -64,7 +64,7 @@ public class TrialSession {
         return drawnCardIds.subList(0, cardCount);
     }
 
-    /* 발언이 전부 끝났는지 (끝나면 판결 받기 가능 · 7장) */
+    /* 발언이 전부 끝났는지 (끝나면 판결 받기 가능) */
     public boolean isFinished() {
         return speakings.size() == TrialTurnOrder.totalCount(cardCount);
     }
@@ -155,4 +155,4 @@ public class TrialSession {
             cardCount = TrialTurnOrder.MAX_CARD_COUNT;
         }
     }
-}
+}

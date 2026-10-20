@@ -6,7 +6,7 @@ import com.verdict.castcourt.domain.speaking.entity.Stage;
 import com.verdict.castcourt.domain.trial.entity.Side;
 
 /* 진행 중 재판의 발언 하나 (메모리 보관용)
- *  컬럼은 speaking 테이블과 같다. 판결 때 SpeakingEntity 로 바뀌어 저장된다. (7장)
+ *  컬럼은 speaking 테이블과 같다. 판결 때 SpeakingEntity 로 바뀌어 저장된다.
  * */
 public record TrialSessionSpeaking(
         int seq,
@@ -22,4 +22,4 @@ public record TrialSessionSpeaking(
         int delta,          // 게이지 변화량 (검사 +, 변호인 -)
         int scoreAfter      // 이 발언 뒤 게이지
 ) {
-}
+}

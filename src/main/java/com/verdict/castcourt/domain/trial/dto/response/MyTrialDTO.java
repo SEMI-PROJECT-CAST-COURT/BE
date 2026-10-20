@@ -1,4 +1,4 @@
-package com.verdict.castcourt.domain.trial.dto;
+package com.verdict.castcourt.domain.trial.dto.response;
 
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.repository.MyTrialRow;
@@ -20,8 +20,8 @@ public record MyTrialDTO(
 
         return new MyTrialDTO(
                 row.getTrialId(),
-                row.getWorkTitle(),
-                row.getQuestion(),
+                row.getCaseSnapshot().workTitle(),
+                row.getCaseSnapshot().question(),
                 row.getRole(),
                 row.getPenaltyTier(),
                 caseDeleted

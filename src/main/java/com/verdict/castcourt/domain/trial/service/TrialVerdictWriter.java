@@ -1,10 +1,12 @@
 package com.verdict.castcourt.domain.trial.service;
 
+import com.verdict.castcourt.domain.account.repository.AccountRepository;
 import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
 import com.verdict.castcourt.domain.speaking.repository.SpeakingRepository;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;
 import com.verdict.castcourt.domain.trial.repository.TrialRepository;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
+import com.verdict.castcourt.domain.workcase.repository.WorkCaseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,11 +22,16 @@ public class TrialVerdictWriter {
 
     private final TrialRepository trialRepository;
     private final SpeakingRepository speakingRepository;
+    private final WorkCaseRepository workCaseRepository;
+    private final AccountRepository accountRepository;
 
     @Autowired
-    public TrialVerdictWriter(TrialRepository trialRepository, SpeakingRepository speakingRepository) {
+    public TrialVerdictWriter(TrialRepository trialRepository, SpeakingRepository speakingRepository,
+                              WorkCaseRepository workCaseRepository, AccountRepository accountRepository) {
         this.trialRepository = trialRepository;
         this.speakingRepository = speakingRepository;
+        this.workCaseRepository = workCaseRepository;
+        this.accountRepository = accountRepository;
     }
 
     /* 저장 · 중간에 하나라도 실패하면 trial · speaking 모두 저장되지 않는다 (롤백)
@@ -33,9 +40,10 @@ public class TrialVerdictWriter {
     @Transactional
     public TrialEntity save(TrialSession session, int penaltyTier, String judgeSummary) {
 
+        // getReferenceById : SELECT 없이 id 만 담은 대리 객체를 받는다 (저장할 때 외래 키 값만 있으면 된다)
         TrialEntity trial = trialRepository.save(new TrialEntity(
-                session.getWorkCaseId(),
-                session.getUserId(),
+                workCaseRepository.getReferenceById(session.getWorkCaseId()),
+                accountRepository.getReferenceById(session.getUserId()),
                 session.getRole(),
                 session.getMode(),
                 session.usedCardIds(),      // 실제로 공방에 쓴 카드만 (3번째를 안 썼으면 2장)
@@ -51,8 +59,6 @@ public class TrialVerdictWriter {
                         s.issue(), s.evidence(), s.rebut(), s.novel(), s.grade(), s.delta(), s.scoreAfter()))
                 .toList();
         speakingRepository.saveAll(speakings);
-
-        // TODO(연결) 8-4 이 판의 ai_call_log 행에 speaking_id 연결 (박찬웅)
 
         return trial;
     }

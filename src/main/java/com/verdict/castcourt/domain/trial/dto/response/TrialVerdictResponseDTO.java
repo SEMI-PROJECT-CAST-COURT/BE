@@ -1,4 +1,4 @@
-package com.verdict.castcourt.domain.trial.dto;
+package com.verdict.castcourt.domain.trial.dto.response;
 
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;

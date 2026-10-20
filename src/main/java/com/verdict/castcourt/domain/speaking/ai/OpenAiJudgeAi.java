@@ -5,15 +5,11 @@ import com.verdict.castcourt.global.ai.AiResult;
 import com.verdict.castcourt.global.ai.OpenAiClient;
 import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
-/* 실제 판사 AI : OpenAI 구조화 출력으로 ①~④ 와 가중치를 받는다
- *  castcourt.ai.mode = openai 일 때만 빈으로 뜬다.
- * */
+/* 판사 AI : OpenAI 구조화 출력으로 ①~④ 와 가중치를 받는다 */
 @Component
-@ConditionalOnProperty(name = "castcourt.ai.mode", havingValue = "openai")
 public class OpenAiJudgeAi implements JudgeAi {
 
     // 판정 JSON 은 짧아서 200 토큰이면 충분하다 (비용 상한)
@@ -54,4 +50,4 @@ public class OpenAiJudgeAi implements JudgeAi {
         );
         return new AiResult<>(result, response.usage());
     }
-}
+}

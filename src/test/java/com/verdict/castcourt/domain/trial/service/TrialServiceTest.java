@@ -1,6 +1,7 @@
 package com.verdict.castcourt.domain.trial.service;
 
-import com.verdict.castcourt.domain.trial.dto.MyTrialListDTO;
+import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
+import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.repository.MyTrialRow;
 import com.verdict.castcourt.domain.trial.repository.TrialRepository;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Limit;
 
 import java.util.List;
 import java.util.stream.IntStream;
@@ -39,7 +41,7 @@ class TrialServiceTest {
     @DisplayName("한 페이지보다 많으면 마지막으로 보여 준 trialId 가 nextCursor 가 된다")
     void nextCursorWhenMore() {
         // trialId 20, 19, ... 10 (PAGE + 1 개)
-        when(trialRepository.findMyTrials(4, null, null, null, null, PAGE + 1))
+        when(trialRepository.findMyTrials(4, null, null, null, null, Limit.of(PAGE + 1)))
                 .thenReturn(rows(20, PAGE + 1));
 
         MyTrialListDTO result = trialService.getMyTrials(4, null, null, null, null);
@@ -51,7 +53,7 @@ class TrialServiceTest {
     @Test
     @DisplayName("한 페이지 이하이면 nextCursor 는 null")
     void lastPage() {
-        when(trialRepository.findMyTrials(4, null, null, null, 11, PAGE + 1))
+        when(trialRepository.findMyTrials(4, null, null, null, 11, Limit.of(PAGE + 1)))
                 .thenReturn(rows(10, 3));
 
         MyTrialListDTO result = trialService.getMyTrials(4, null, null, null, "11");
@@ -63,13 +65,13 @@ class TrialServiceTest {
     @Test
     @DisplayName("필터 값은 문자열로 리포지토리에 넘긴다")
     void filtersPassed() {
-        when(trialRepository.findMyTrials(4, "DEFENSE", "WIN", 1, null, PAGE + 1))
+        when(trialRepository.findMyTrials(4, Side.DEFENSE, "WIN", 1, null, Limit.of(PAGE + 1)))
                 .thenReturn(List.of());
 
         MyTrialListDTO result = trialService.getMyTrials(4, "DEFENSE", "WIN", 1, "");
 
         assertTrue(result.items().isEmpty());
-        verify(trialRepository).findMyTrials(4, "DEFENSE", "WIN", 1, null, PAGE + 1);
+        verify(trialRepository).findMyTrials(4, Side.DEFENSE, "WIN", 1, null, Limit.of(PAGE + 1));
     }
 
     @Test
@@ -97,8 +99,9 @@ class TrialServiceTest {
     private MyTrialRow row(int trialId) {
         return new MyTrialRow() {
             public Integer getTrialId() { return trialId; }
-            public String getWorkTitle() { return "작품"; }
-            public String getQuestion() { return "쟁점"; }
+            public CaseSnapshot getCaseSnapshot() {
+                return new CaseSnapshot(7, 1, "작품", "쟁점", null, null, null, null, List.of(), List.of());
+            }
             public Side getRole() { return Side.DEFENSE; }
             public Integer getPenaltyTier() { return 3; }
             public Boolean getCaseUsage() { return true; }

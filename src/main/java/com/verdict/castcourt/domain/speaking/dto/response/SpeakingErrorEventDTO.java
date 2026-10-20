@@ -1,4 +1,4 @@
-package com.verdict.castcourt.domain.speaking.dto;
+package com.verdict.castcourt.domain.speaking.dto.response;
 
 import com.verdict.castcourt.global.exception.ErrorCode;
 

@@ -5,13 +5,11 @@ import com.verdict.castcourt.global.ai.AiResult;
 import com.verdict.castcourt.global.ai.OpenAiClient;
 import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
-/* 실제 판사 총평 AI : 서버가 정한 판결의 이유를 OpenAI 로 쓴다 */
+/* 판사 총평 AI : 서버가 정한 판결의 이유를 OpenAI 로 쓴다 */
 @Component
-@ConditionalOnProperty(name = "castcourt.ai.mode", havingValue = "openai")
 public class OpenAiVerdictAi implements VerdictAi {
 
     // 500자 총평 + 여유
@@ -41,10 +39,10 @@ public class OpenAiVerdictAi implements VerdictAi {
         if (summary.isEmpty()) {
             throw new BusinessException(ErrorCode.AI_UPSTREAM_ERROR);
         }
-        // AI 가 길이 지시를 넘겨도 DB 저장(7장)이 실패하지 않게 컬럼 길이에서 자른다
+        // AI 가 길이 지시를 넘겨도 DB 저장이 실패하지 않게 컬럼 길이에서 자른다
         if (summary.length() > SUMMARY_COLUMN_LENGTH) {
             summary = summary.substring(0, SUMMARY_COLUMN_LENGTH);
         }
         return new AiResult<>(summary, response.usage());
     }
-}
+}
