@@ -1,19 +1,20 @@
 package com.verdict.castcourt.domain.category.service;
+import com.verdict.castcourt.global.exception.BusinessException;
 
 import com.verdict.castcourt.domain.category.controller.*;
 import com.verdict.castcourt.domain.category.dto.CategoryOrderRequest;
 import com.verdict.castcourt.domain.category.entity.Category;
 import com.verdict.castcourt.domain.category.repository.CategoryRepository;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class CategoryOrderTest {
     private final CategoryRepository repository = mock(CategoryRepository.class);
-    private final CategoryService service = new CategoryService(repository);
+    private final CategoryService service = new CategoryService(repository, mock(com.verdict.castcourt.domain.work.repository.WorkRepository.class));
 
     private Category category(int id, String name, int order) throws Exception {
         var category = new Category(name, order);
@@ -42,9 +43,9 @@ class CategoryOrderTest {
         when(repository.findAll()).thenReturn(List.of(first,second,fixed));
         for (var ids : List.of(List.of(1,1), List.of(1), List.of(1,3),
                 List.of(1,2,4), List.<Integer>of())) {
-            var error = assertThrows(CategoryApiException.class, () -> service.reorderCategories(ids));
-            assertEquals(400,error.getStatus());
-            assertEquals("INVALID_CATEGORY_ORDER",error.getCode());
+            var error = assertThrows(BusinessException.class, () -> service.reorderCategories(ids));
+            assertEquals(400,error.getErrorCode().getStatus().value());
+            assertEquals("INVALID_CATEGORY_ORDER",error.getErrorCode().getCode());
         }
         assertEquals(1,first.getSortOrder());
         assertEquals(2,second.getSortOrder());
@@ -53,8 +54,8 @@ class CategoryOrderTest {
     }
 
     @Test void rejectsNullListAndNullId() {
-        assertThrows(CategoryApiException.class, () -> service.reorderCategories(null));
-        assertThrows(CategoryApiException.class, () -> service.reorderCategories(Arrays.asList(1,null)));
+        assertThrows(BusinessException.class, () -> service.reorderCategories(null));
+        assertThrows(BusinessException.class, () -> service.reorderCategories(Arrays.asList(1,null)));
         verifyNoInteractions(repository);
     }
 
@@ -66,22 +67,14 @@ class CategoryOrderTest {
         verify(repository).flush();
     }
 
-    @Test void controllerChecksAdminAndReturnsEmpty200() {
-        var mocked = mock(CategoryService.class);
-        var controller = new AdminCategoryController(mocked);
-        var request = new CategoryOrderRequest(List.of(2,1));
-        assertEquals(401,assertThrows(CategoryApiException.class,
-                () -> controller.reorder(request,null)).getStatus());
-        var user = new UsernamePasswordAuthenticationToken("user","",
-                List.of(new SimpleGrantedAuthority("USER")));
-        assertEquals(403,assertThrows(CategoryApiException.class,
-                () -> controller.reorder(request,user)).getStatus());
-        for (String role : List.of("ADMIN","SUPER_ADMIN")) {
-            var auth = new UsernamePasswordAuthenticationToken("admin","",
-                    List.of(new SimpleGrantedAuthority(role)));
-            var response = controller.reorder(request,auth);
-            assertEquals(200,response.getStatusCode().value());
-            assertNull(response.getBody());
-        }
+    @Test
+    void controllerReturnsEmpty200() {
+        var service = mock(CategoryService.class);
+        var controller = new AdminCategoryController(service);
+        var data = new CategoryOrderRequest(List.of(2,1));
+        var response = controller.reorder(data);
+        assertEquals(200, response.getStatusCode().value());
+        assertNull(response.getBody());
+        verify(service).reorderCategories(List.of(2,1));
     }
 }

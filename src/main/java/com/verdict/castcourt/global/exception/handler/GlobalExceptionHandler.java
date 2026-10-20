@@ -51,9 +51,12 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class,
             MissingServletRequestParameterException.class,
-            HandlerMethodValidationException.class
+            HandlerMethodValidationException.class,
+            IllegalArgumentException.class
     })
-    public ResponseEntity<ErrorResponse> handleBadRequest(Exception e) {
+    public ResponseEntity<ErrorResponse> handleBadRequest(Exception e, jakarta.servlet.http.HttpServletRequest request) {
+        ErrorCode inputError = domainInputError(request);
+        if (inputError != null) return toResponse(inputError);
 
         log.warn("[BadRequest] {}", e.getMessage());
 
@@ -113,4 +116,41 @@ public class GlobalExceptionHandler {
                         message)
                 );
     }
-}
+
+    @ExceptionHandler({
+            org.springframework.web.multipart.support.MissingServletRequestPartException.class,
+            org.springframework.web.HttpMediaTypeNotSupportedException.class})
+    public ResponseEntity<ErrorResponse> handleRequestPart(Exception e,
+            jakarta.servlet.http.HttpServletRequest request) {
+        ErrorCode inputError = domainInputError(request);
+        if (inputError != null) return toResponse(inputError);
+        HttpStatus status = e instanceof org.springframework.web.HttpMediaTypeNotSupportedException
+                ? HttpStatus.UNSUPPORTED_MEDIA_TYPE : HttpStatus.BAD_REQUEST;
+        return toResponse(status, "요청 형식을 확인해 주세요.");
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUploadSize(
+            org.springframework.web.multipart.MaxUploadSizeExceededException e,
+            jakarta.servlet.http.HttpServletRequest request) {
+        if (request.getRequestURI().startsWith(request.getContextPath() + "/api/admin/works")) {
+            return toResponse(ErrorCode.POSTER_TOO_LARGE);
+        }
+        return toResponse(HttpStatus.CONTENT_TOO_LARGE, "업로드 용량을 확인해 주세요.");
+    }
+
+    private ErrorCode domainInputError(jakarta.servlet.http.HttpServletRequest request) {
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        if (path.equals("/api/admin/categories/order")) return ErrorCode.INVALID_CATEGORY_ORDER;
+        if (path.equals("/api/admin/categories") || path.startsWith("/api/admin/categories/")) {
+            return null;
+        }
+        if (path.equals("/api/admin/works/summary-draft")) return ErrorCode.WORK_DRAFT_INPUT_INVALID;
+        if (path.equals("/api/works") && request.getMethod().equals("GET")) {
+            return ErrorCode.INVALID_WORK_LIST_QUERY;
+        }
+        if (path.startsWith("/api/admin/works") || path.startsWith("/api/works/")) {
+            return ErrorCode.WORK_INPUT_INVALID;
+        }
+        return null;
+    }}

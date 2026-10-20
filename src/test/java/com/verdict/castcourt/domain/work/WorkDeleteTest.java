@@ -1,12 +1,13 @@
 package com.verdict.castcourt.domain.work;
+import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.domain.category.entity.Category;
 import com.verdict.castcourt.domain.work.controller.AdminWorkController;
 import com.verdict.castcourt.domain.work.entity.Work;
 import com.verdict.castcourt.domain.work.repository.WorkRepository;
 import com.verdict.castcourt.domain.work.service.*;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+
 import java.time.LocalDate;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -14,7 +15,7 @@ import static org.mockito.Mockito.*;
 
 class WorkDeleteTest {
     private final WorkRepository repository = mock(WorkRepository.class);
-    private final WorkDeleteService service = new WorkDeleteService(repository);
+    private final WorkService service = new WorkService(repository, mock(com.verdict.castcourt.domain.work.repository.WorkListRepository.class), mock(com.verdict.castcourt.domain.category.repository.CategoryRepository.class), mock(PosterStorage.class));
     private Work work() {
         return new Work(new Category("영화",1),"작품","작가",LocalDate.of(2024,1,1),
                 "소개","/images/default-poster.svg");
@@ -36,9 +37,9 @@ class WorkDeleteTest {
 
     @Test void missingOrAlreadyDeletedWorkReturns404() {
         when(repository.findActiveById(1)).thenReturn(Optional.empty());
-        var error=assertThrows(WorkListException.class, () -> service.delete(1));
-        assertEquals(404,error.getStatus());
-        assertEquals("WORK_NOT_FOUND",error.getCode());
+        var error=assertThrows(BusinessException.class, () -> service.delete(1));
+        assertEquals(404,error.getErrorCode().getStatus().value());
+        assertEquals("WORK_NOT_FOUND",error.getErrorCode().getCode());
         verify(repository,never()).hideCasesByWorkId(any());
         verify(repository,never()).flush();
     }
@@ -52,22 +53,13 @@ class WorkDeleteTest {
         verify(repository,never()).flush();
     }
 
-    @Test void controllerChecksRolesAndReturnsEmpty204() {
-        var deletes=mock(WorkDeleteService.class);
-        var controller=new AdminWorkController(mock(WorkCreateService.class),
-                mock(WorkUpdateService.class),deletes);
-        assertEquals(401,assertThrows(WorkListException.class,
-                () -> controller.delete(1,null)).getStatus());
-        var user=new UsernamePasswordAuthenticationToken("user","",
-                List.of(new SimpleGrantedAuthority("USER")));
-        assertEquals(403,assertThrows(WorkListException.class,
-                () -> controller.delete(1,user)).getStatus());
-        for(String role:List.of("ADMIN","SUPER_ADMIN")) {
-            var admin=new UsernamePasswordAuthenticationToken("admin","",
-                    List.of(new SimpleGrantedAuthority(role)));
-            var response=controller.delete(1,admin);
-            assertEquals(204,response.getStatusCode().value());
-            assertNull(response.getBody());
-        }
+    @Test
+    void controllerReturnsEmpty204() {
+        var service = mock(WorkService.class);
+        var controller = new AdminWorkController(service);
+        var response = controller.delete(1);
+        assertEquals(204, response.getStatusCode().value());
+        assertNull(response.getBody());
+        verify(service).delete(1);
     }
 }

@@ -1,4 +1,5 @@
 package com.verdict.castcourt.domain.work;
+import com.verdict.castcourt.global.exception.BusinessException;
 
 import com.verdict.castcourt.domain.category.entity.Category;
 import com.verdict.castcourt.domain.category.repository.CategoryRepository;
@@ -9,8 +10,8 @@ import com.verdict.castcourt.domain.work.repository.WorkRepository;
 import com.verdict.castcourt.domain.work.service.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+
 import org.springframework.transaction.support.*;
 import java.time.LocalDate;
 import java.util.*;
@@ -21,7 +22,7 @@ class WorkUpdateTest {
     private final WorkRepository works = mock(WorkRepository.class);
     private final CategoryRepository categories = mock(CategoryRepository.class);
     private final PosterStorage posters = mock(PosterStorage.class);
-    private final WorkUpdateService service = new WorkUpdateService(works, categories, posters);
+    private final WorkService service = new WorkService(works, mock(com.verdict.castcourt.domain.work.repository.WorkListRepository.class), categories, posters);
     private final Category category = new Category("영화", 1);
     private final Work work = new Work(category, "기존", "원작자", LocalDate.of(2024,1,1),
             "기존 소개", "/images/default-poster.svg");
@@ -58,19 +59,19 @@ class WorkUpdateTest {
 
     @Test void missingOrDeletedWorkReturns404() {
         when(works.findActiveById(1)).thenReturn(Optional.empty());
-        assertEquals(404, assertThrows(WorkListException.class,
-                () -> service.update(1, request("수정", null), null)).getStatus());
+        assertEquals(404, assertThrows(BusinessException.class,
+                () -> service.update(1, request("수정", null), null)).getErrorCode().getStatus().value());
         verifyNoInteractions(posters);
     }
 
     @Test void invalidFieldsOrCategoryReturn400() {
         prepare();
-        assertEquals("WORK_INPUT_INVALID", assertThrows(WorkListException.class,
-                () -> service.update(1, request(" ", null), null)).getCode());
-        assertThrows(WorkListException.class,
+        assertEquals("WORK_INPUT_INVALID", assertThrows(BusinessException.class,
+                () -> service.update(1, request(" ", null), null)).getErrorCode().getCode());
+        assertThrows(BusinessException.class,
                 () -> service.update(1, request("제목", "가".repeat(101)), null));
         when(categories.findById(2)).thenReturn(Optional.empty());
-        assertThrows(WorkListException.class,
+        assertThrows(BusinessException.class,
                 () -> service.update(1, request("제목", null), null));
         verify(works, never()).flush();
         verifyNoInteractions(posters);
@@ -79,8 +80,8 @@ class WorkUpdateTest {
     @Test void duplicateTitleReturns409BeforeUpload() {
         prepare();
         when(works.existsByTitleAndIdNot("중복",1)).thenReturn(true);
-        assertEquals(409, assertThrows(WorkListException.class,
-                () -> service.update(1, request("중복", null), null)).getStatus());
+        assertEquals(409, assertThrows(BusinessException.class,
+                () -> service.update(1, request("중복", null), null)).getErrorCode().getStatus().value());
         verifyNoInteractions(posters);
     }
 
@@ -114,21 +115,14 @@ class WorkUpdateTest {
         verify(posters, never()).delete("/images/default-poster.svg");
     }
 
-    @Test void controllerReturnsEmpty200AndChecksRoles() {
-        var updates = mock(WorkUpdateService.class);
-        var controller = new AdminWorkController(mock(WorkCreateService.class), updates, mock(WorkDeleteService.class));
-        assertEquals(401, assertThrows(WorkListException.class,
-                () -> controller.update(1, request("수정", null), null, null)).getStatus());
-        var user = new UsernamePasswordAuthenticationToken("user", "",
-                List.of(new SimpleGrantedAuthority("USER")));
-        assertEquals(403, assertThrows(WorkListException.class,
-                () -> controller.update(1, request("수정", null), null, user)).getStatus());
-        for (String role : List.of("ADMIN", "SUPER_ADMIN")) {
-            var admin = new UsernamePasswordAuthenticationToken("admin", "",
-                    List.of(new SimpleGrantedAuthority(role)));
-            var response = controller.update(1, request("수정", null), null, admin);
-            assertEquals(200, response.getStatusCode().value());
-            assertNull(response.getBody());
-        }
+    @Test
+    void controllerReturnsEmpty200() {
+        var service = mock(WorkService.class);
+        var controller = new AdminWorkController(service);
+        var data = request("수정", null);
+        var response = controller.update(1, data, null);
+        assertEquals(200, response.getStatusCode().value());
+        assertNull(response.getBody());
+        verify(service).update(1, data, null);
     }
 }

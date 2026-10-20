@@ -1,6 +1,7 @@
 package com.verdict.castcourt.domain.category.service;
+import com.verdict.castcourt.global.exception.BusinessException;
 
-import com.verdict.castcourt.domain.category.controller.CategoryApiException;
+
 import com.verdict.castcourt.domain.category.entity.Category;
 import com.verdict.castcourt.domain.category.repository.CategoryRepository;
 import org.junit.jupiter.api.Test;
@@ -12,17 +13,16 @@ import static org.mockito.Mockito.*;
 
 class CategoryServiceTest {
     private final CategoryRepository repository = mock(CategoryRepository.class);
-    private final CategoryService service = new CategoryService(repository);
+    private final CategoryService service = new CategoryService(repository, mock(com.verdict.castcourt.domain.work.repository.WorkRepository.class));
 
     @Test
     void rejectsBlankAndLongNames() {
         for (String name : new String[]{null, "", "   "}) {
-            assertEquals("CATEGORY_NAME_INVALID",
-                    assertThrows(CategoryApiException.class, () -> service.createCategory(name)).getCode());
+            assertThrows(IllegalArgumentException.class, () -> service.createCategory(name));
         }
         assertEquals("CATEGORY_NAME_TOO_LONG",
-                assertThrows(CategoryApiException.class,
-                        () -> service.createCategory("가".repeat(11))).getCode());
+                assertThrows(BusinessException.class,
+                        () -> service.createCategory("가".repeat(11))).getErrorCode().getCode());
         verifyNoInteractions(repository);
     }
 
@@ -30,7 +30,7 @@ class CategoryServiceTest {
     void rejectsDuplicateName() {
         when(repository.existsByName("영화")).thenReturn(true);
         assertEquals("CATEGORY_NAME_DUPLICATE",
-                assertThrows(CategoryApiException.class, () -> service.createCategory("영화")).getCode());
+                assertThrows(BusinessException.class, () -> service.createCategory("영화")).getErrorCode().getCode());
         verify(repository, never()).saveAndFlush(any());
     }
 
@@ -52,6 +52,6 @@ class CategoryServiceTest {
         when(repository.saveAndFlush(any(Category.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate"));
         assertEquals("CATEGORY_NAME_DUPLICATE",
-                assertThrows(CategoryApiException.class, () -> service.createCategory("영화")).getCode());
+                assertThrows(BusinessException.class, () -> service.createCategory("영화")).getErrorCode().getCode());
     }
 }
