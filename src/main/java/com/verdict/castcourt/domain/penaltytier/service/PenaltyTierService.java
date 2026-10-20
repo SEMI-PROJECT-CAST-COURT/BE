@@ -10,7 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class PenaltyTierService {
@@ -72,6 +77,37 @@ public class PenaltyTierService {
             if (sentence == null || sentence.isBlank() || sentence.length() > 50) {
                 throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
             }
+        }
+    }
+
+    @Transactional
+    public void updatePenaltyTiers(int caseId, List<PenaltyTierDTO> penalties) {
+        if (penalties == null || penalties.isEmpty()) {
+            return;
+        }
+
+        // 사건의 형벌표 6개를 tier 기준 Map으로
+        Map<Integer, PenaltyTierEntity> tierMap = penaltyTierRepository.findByWorkCaseId(caseId).stream()
+                .collect(Collectors.toMap(PenaltyTierEntity::getTier, Function.identity()));
+
+        Set<Integer> seen = new HashSet<>();
+        for (PenaltyTierDTO penalty : penalties) {
+            int tier = penalty.getTier();
+
+            if (tier < 1 || tier > 6 || !seen.add(tier)) {
+                throw new BusinessException(ErrorCode.PENALTY_TIER_COUNT_INVALID);
+            }
+
+            String sentence = penalty.getSentence();
+            if (sentence == null || sentence.isBlank() || sentence.length() > 50) {
+                throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+            }
+
+            PenaltyTierEntity entity = tierMap.get(tier);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.CASE_NOT_FOUND);
+            }
+            entity.updateSentence(sentence);
         }
     }
 }
