@@ -43,7 +43,7 @@ public enum ErrorCode {
     INVALID_WORK_LIST_QUERY(HttpStatus.BAD_REQUEST, "INVALID_WORK_LIST_QUERY", "작품 목록 검색 조건을 확인해 주세요."),
     WORK_DRAFT_INPUT_INVALID(HttpStatus.BAD_REQUEST, "WORK_DRAFT_INPUT_INVALID", "작품 제목과 원작자를 입력해 주세요."),
     POSTER_INVALID_FORMAT(HttpStatus.BAD_REQUEST, "POSTER_INVALID_FORMAT", "포스터는 JPG 또는 PNG만 등록할 수 있습니다."),
-    POSTER_TOO_LARGE(HttpStatus.BAD_REQUEST, "POSTER_TOO_LARGE", "포스터는 5MB 이하여야 합니다."),
+    POSTER_TOO_LARGE(HttpStatus.BAD_REQUEST, "POSTER_TOO_LARGE", "포스터는 100KB 이하여야 합니다."),
 
     // ==================== Case ====================
     CASE_NOT_FOUND(HttpStatus.NOT_FOUND, "CASE_NOT_FOUND", "사건을 찾을 수 없습니다."),

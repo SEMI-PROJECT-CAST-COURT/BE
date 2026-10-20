@@ -1,5 +1,8 @@
 package com.verdict.castcourt.domain.work.service;
 
+import com.verdict.castcourt.global.exception.BusinessException;
+import com.verdict.castcourt.global.exception.ErrorCode;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,7 +21,7 @@ public class PosterStorage {
     public String save(MultipartFile file) {
         if (file == null || file.isEmpty()) throw invalidInput();
         if (file.getSize() > 100L * 1024)
-            throw new WorkListException(400, "POSTER_TOO_LARGE", "포스터는 100KB 이하여야 합니다.");
+            throw new BusinessException(ErrorCode.POSTER_TOO_LARGE);
         try {
             byte[] bytes = file.getBytes();
             String format;
@@ -39,7 +42,7 @@ public class PosterStorage {
             Files.write(root.resolve(filename), bytes, StandardOpenOption.CREATE_NEW);
             return "/uploads/posters/" + filename;
         } catch (IOException exception) {
-            throw new WorkListException(500, "INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다.");
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -52,10 +55,10 @@ public class PosterStorage {
         }
     }
 
-    private WorkListException invalidInput() {
-        return new WorkListException(400, "WORK_INPUT_INVALID", "작품 정보를 확인해주세요");
+    private BusinessException invalidInput() {
+        return new BusinessException(ErrorCode.WORK_INPUT_INVALID);
     }
-    private WorkListException invalidFormat() {
-        return new WorkListException(400, "POSTER_INVALID_FORMAT", "포스터는 JPG 또는 PNG만 등록할 수 있습니다.");
+    private BusinessException invalidFormat() {
+        return new BusinessException(ErrorCode.POSTER_INVALID_FORMAT);
     }
 }
