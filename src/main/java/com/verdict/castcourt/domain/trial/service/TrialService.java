@@ -3,11 +3,14 @@ package com.verdict.castcourt.domain.trial.service;
 import com.verdict.castcourt.domain.speaking.ai.VerdictAi;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
+import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
+import com.verdict.castcourt.domain.speaking.repository.SpeakingRepository;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialDTO;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.request.TrialOutcome;
 import com.verdict.castcourt.domain.trial.dto.request.TrialStartRequestDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialRecordResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStartResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialVerdictResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
@@ -46,6 +49,7 @@ public class TrialService {
     private final SpeakingService speakingService;     // 변호인 시작 때 AI 검사 모두 진술
     private final VerdictAi verdictAi;                 // 판사 총평
     private final TrialVerdictWriter trialVerdictWriter;   // 판결 저장 트랜잭션
+    private final SpeakingRepository speakingRepository;   // 재판 기록의 발언 읽기
 
     @Autowired
     public TrialService(TrialRepository trialRepository,
@@ -53,13 +57,15 @@ public class TrialService {
                         TrialSessionStore trialSessionStore,
                         SpeakingService speakingService,
                         VerdictAi verdictAi,
-                        TrialVerdictWriter trialVerdictWriter) {
+                        TrialVerdictWriter trialVerdictWriter,
+                        SpeakingRepository speakingRepository) {
         this.trialRepository = trialRepository;
         this.trialCaseReader = trialCaseReader;
         this.trialSessionStore = trialSessionStore;
         this.speakingService = speakingService;
         this.verdictAi = verdictAi;
         this.trialVerdictWriter = trialVerdictWriter;
+        this.speakingRepository = speakingRepository;
     }
 
     /* 재판 시작 (TRL-01) : 검사 → 스냅샷 · 카드 추첨 → (변호인이면 AI 검사 모두 진술) → 메모리에 저장 (DB 저장 없음)
@@ -272,5 +278,21 @@ public class TrialService {
             }
             trialSessionStore.remove(session);
         });
+    }
+
+    // 재판 기록 (TRL-05) : 저장된 판이 없으면 404, 남의 판이면 403
+    @Transactional(readOnly = true)
+    public TrialRecordResponseDTO getTrialRecord(int userId, int trialId) {
+
+        TrialEntity trial = trialRepository.findById(trialId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRIAL_RECORD_NOT_FOUND));
+
+        // getUserId() 는 user_id 컬럼을 그대로 읽는 읽기 전용 필드 (계정 테이블을 읽지 않는다)
+        if (trial.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TRIAL_ACCESS_DENIED);
+        }
+
+        List<SpeakingEntity> speakings = speakingRepository.findByTrialIdOrderBySeqAsc(trialId);
+        return TrialRecordResponseDTO.of(trial, speakings);
     }
 }

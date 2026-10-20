@@ -3,6 +3,7 @@ package com.verdict.castcourt.domain.trial.controller;
 import org.springframework.web.bind.annotation.*;
 import com.verdict.castcourt.domain.trial.dto.response.MyTrialListDTO;
 import com.verdict.castcourt.domain.trial.dto.request.TrialStartRequestDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialRecordResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStartResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.trial.dto.response.TrialVerdictResponseDTO;
@@ -93,5 +94,17 @@ public class TrialController {
 
         // 204 No Content : 성공했고 돌려줄 본문이 없다 (SingleResponse 로 감싸지 않음)
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "재판 기록",
+            description = "판결이 난 내 재판의 발언 전체와 결정적 순간(keyMoments = 게이지를 가장 크게 움직인 발언 seq 3개)을 조회합니다.")
+    @GetMapping("/api/trials/{trialId}/record")
+    public ResponseEntity<SingleResponse<TrialRecordResponseDTO>> getTrialRecord(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @Parameter(description = "판결 받기 응답의 trialId (DB id)") @PathVariable Integer trialId
+    ) {
+        TrialRecordResponseDTO response = trialService.getTrialRecord(user.getId(), trialId);
+
+        return ResponseEntity.ok(new SingleResponse<>(HttpStatus.OK.value(), response));
     }
 }

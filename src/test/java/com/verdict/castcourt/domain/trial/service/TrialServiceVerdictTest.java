@@ -173,9 +173,9 @@ class TrialServiceVerdictTest {
         assertSame(trial, speakings.getFirst().getTrial());
     }
 
-    // 생성자 주입 · SpeakingService 는 판결 받기에서 쓰지 않아서 null
+    // 생성자 주입 · SpeakingService · SpeakingRepository 는 판결 받기에서 쓰지 않아서 null
     private TrialService newService() {
-        return new TrialService(trialRepository, null, trialSessionStore, null, verdictAi, trialVerdictWriter);
+        return new TrialService(trialRepository, null, trialSessionStore, null, verdictAi, trialVerdictWriter, null);
     }
 
     // 카드 2장(11 · 12) · 형벌표 6단계 · userId 4 · 사건 7
