@@ -16,16 +16,8 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.Set;
 
-/* AI 사건 초안 (노션 API 명세 'AI 사건 초안') : ws://localhost:8080/ws/admin/case-draft
- *  → auth { token }  : BaseWebSocketHandler 가 처리
- *  → draft { step, ... } : 여기서 step 으로 나눈다
- *  → cancel { }      : BaseWebSocketHandler 가 처리
- *  ← delta { text } / done { json } / error { status, code, message }
- *  주소 등록(WebSocketConfig) · /ws/** 허용(SecurityConfig)은 이미 되어 있어서 이 클래스만 추가하면 된다.
- * */
 @Component
 public class CardDraftWebSocketHandler extends BaseWebSocketHandler {
-
     private final CardDraftService cardDraftService;
 
     public CardDraftWebSocketHandler(JwtTokenProvider jwtTokenProvider,
@@ -63,11 +55,17 @@ public class CardDraftWebSocketHandler extends BaseWebSocketHandler {
             case "CARDS" -> {
                 CardDraftRequestDTO request = CardDraftRequestDTO.from(message);
                 // 요청값 · 작품 확인은 작업 스레드로 넘기기 전에 한다 (실패하면 바로 error)
-                cardDraftService.validate(request);
+                cardDraftService.validateDraft(request);
                 // AI 호출은 작업 스레드에서 · 돌려준 카드 1장이 done 의 json 이 된다
                 runAsync(session, () -> cardDraftService.generate(request));
             }
-            // TODO CANDIDATES / REWRITE / CARD_SUGGEST / PENALTY
+            // 근거 카드 수정 제안 : card(검토할 카드) → 제안 문구 + 고친 카드 ([적용] / [무시]는 화면이 정한다)
+            case "CARD_SUGGEST" -> {
+                CardDraftRequestDTO request = CardDraftRequestDTO.from(message);
+                cardDraftService.validateSuggest(request);
+                runAsync(session, () -> cardDraftService.suggest(request));
+            }
+            // TODO CANDIDATES / REWRITE / PENALTY
             default -> throw new BusinessException(ErrorCode.WS_DRAFT_REQUEST_INVALID);
         }
     }
