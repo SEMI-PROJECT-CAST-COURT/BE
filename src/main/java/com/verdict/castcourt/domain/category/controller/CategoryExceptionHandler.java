@@ -5,7 +5,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = AdminCategoryController.class)
+@RestControllerAdvice(assignableTypes = {AdminCategoryController.class, AdminCategoryDeleteController.class})
 public class CategoryExceptionHandler {
     public record ErrorBody(int statusCode, String businessCode, String message) {}
 
@@ -25,4 +25,10 @@ public class CategoryExceptionHandler {
                 400, "CATEGORY_NAME_INVALID", "카테고리 이름을 입력해 주세요."));
     }
 
-}
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorBody> unexpected(Exception exception) {
+        org.slf4j.LoggerFactory.getLogger(CategoryExceptionHandler.class)
+                .error("카테고리 API 처리 실패", exception);
+        return ResponseEntity.internalServerError().body(new ErrorBody(
+                500, "INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다."));
+    }}
