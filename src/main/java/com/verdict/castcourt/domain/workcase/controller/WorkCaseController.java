@@ -1,6 +1,6 @@
 package com.verdict.castcourt.domain.workcase.controller;
 
-import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseCreateRequestDTO;
+import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseRequestDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseDetailResponseDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCasePrepareResponseDTO;
@@ -76,8 +76,17 @@ public class WorkCaseController {
     }
 
     /* 사건 등록 */
+    @Operation(summary = "사건 등록",
+            description = "관리자가 작품에 사건을 등록합니다. 사건 정보와 근거 카드 목록(cards), 형벌표(penalties)를 함께 저장하고, " +
+                    "생성된 사건 id를 응답합니다. 하나라도 검증에 실패하면 사건 · 카드 · 형벌표 모두 저장되지 않습니다. " +
+                    "question은 1~100자, suspect · victim은 1~50자, summary는 1~1000자, progress는 1~1000자입니다. " +
+                    "근거 카드는 side(PROSECUTION / DEFENSE)별로 3장 이상이어야 하며, title은 1~20자, body는 1~70자, weight는 1~20입니다. " +
+                    "형벌표는 tier 1~6을 한 번씩 정확히 6개 등록해야 하며, sentence는 1~50자입니다. " +
+                    "입력값이 잘못되면 CASE_INPUT_INVALID(400), progress가 1000자를 넘으면 CASE_PROGRESS_TOO_LONG(400), " +
+                    "카드가 진영별 3장 미만이면 CASE_CARD_COUNT_INSUFFICIENT(400), 카드 가중치가 범위를 벗어나면 CARD_WEIGHT_INVALID(400), " +
+                    "형벌표 단계가 누락 · 중복되거나 범위를 벗어나면 PENALTY_TIER_COUNT_INVALID(400)를 응답합니다.")
     @PostMapping("/api/admin/cases")
-    public SingleResponse<Integer> registerWorkCase(@RequestBody WorkCaseCreateRequestDTO requestDTO) {
+    public SingleResponse<Integer> registerWorkCase(@RequestBody WorkCaseRequestDTO requestDTO) {
 
         return new SingleResponse<>(
                 201,

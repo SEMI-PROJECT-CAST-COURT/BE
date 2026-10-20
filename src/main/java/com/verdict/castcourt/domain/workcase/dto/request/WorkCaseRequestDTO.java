@@ -1,10 +1,11 @@
 package com.verdict.castcourt.domain.workcase.dto.request;
 
 import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardDTO;
+import com.verdict.castcourt.domain.penaltytier.dto.PenaltyTierDTO;
 
 import java.util.List;
 
-public record WorkCaseCreateRequestDTO(
+public record WorkCaseRequestDTO(
         int workId,
         String question,
         String suspect,
@@ -12,5 +13,5 @@ public record WorkCaseCreateRequestDTO(
         String summary,
         String progress,
         List<EvidenceCardDTO> cards,
-        List<WorkCasePenaltyRequestDTO> penalties
+        List<PenaltyTierDTO> penalties
 ) {}
