@@ -80,4 +80,10 @@ public class EvidenceCardEntity {
     public void setWeight(int weight) {
         this.weight = weight;
     }
+
+    public void update(String title, String body, Integer weight) {
+        if (title != null) this.title = title;
+        if (body != null) this.body = body;
+        if (weight != null) this.weight = weight;
+    }
 }
