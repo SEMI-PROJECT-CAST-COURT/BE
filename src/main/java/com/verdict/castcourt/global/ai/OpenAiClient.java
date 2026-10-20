@@ -54,12 +54,12 @@ public class OpenAiClient {
 
     public OpenAiClient(ObjectMapper objectMapper,
                         // 환경 변수 OPENAI_API_KEY → openai.api-key (없으면 빈 문자열)
-                        @Value("${openai.api-key:${OPENAI_API_KEY:}}") String apiKey,
-                        @Value("${openai.base-url:https://api.openai.com/v1}") String baseUrl,
+                        @Value("${openai.api-key}") String apiKey,
+                        @Value("${openai.base-url}") String baseUrl,
                         // 모델 이름은 예제 값 · 쓸 수 있는 이름은 OpenAI 공식 문서에서 확인 필요
-                        @Value("${openai.model:gpt-6-luna}") String model,
+                        @Value("${openai.model}") String model,
                         // 추론(생각) 정도 · 빈 값이면 보내지 않는다 (추론 기능이 없는 모델용)
-                        @Value("${openai.reasoning-effort:none}") String reasoningEffort) {
+                        @Value("${openai.reasoning-effort}") String reasoningEffort) {
 
         this.objectMapper = objectMapper;
         this.enabled = apiKey != null && !apiKey.isBlank();
