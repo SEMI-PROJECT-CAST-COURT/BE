@@ -4,14 +4,16 @@ public class AccountDTO {
     private int id;
     private String username;
     private String nickname;
+    private String authority;
     private boolean isUsage;
 
     public AccountDTO() {}
 
-    public AccountDTO(int id, String username, String nickname, boolean isUsage) {
+    public AccountDTO(int id, String username, String nickname, String authority, boolean isUsage) {
         this.id = id;
         this.username = username;
         this.nickname = nickname;
+        this.authority = authority;
         this.isUsage = isUsage;
     }
 
@@ -37,6 +39,14 @@ public class AccountDTO {
 
     public void setNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    public String getAuthority() {
+        return authority;
+    }
+
+    public void setAuthority(String authority) {
+        this.authority = authority;
     }
 
     public boolean isUsage() {
