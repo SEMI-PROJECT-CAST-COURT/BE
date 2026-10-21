@@ -1,0 +1,72 @@
+### 1. 관리자 로그인 → 받은 토큰을 adminToken 에 저장 (2 ~ 5번이 이 토큰을 쓴다)
+POST http://localhost:8080/login
+Content-Type: application/json
+
+{ "username": "superadmin", "password": "castcourt123!" }
+
+> {%
+    client.global.set("adminToken", response.body.result.token);
+%}
+
+### 2. 형벌표 처음 만들기 : 기대 결과 = done { json: [ { tier: 1, title: "무죄 3단계", sentence }, ... tier 6 ] }
+WEBSOCKET ws://localhost:8080/ws/admin/penalty-draft
+Content-Type: application/json
+
+{ "type": "auth", "token": "{{adminToken}}" }
+===
+{
+  "type": "draft",
+  "step": "PENALTY",
+  "workId": 1,
+  "question": "보호와 양육을 제공했더라도, 당사자 몰래 일상을 방송한 책임을 물을 수 있는가?",
+  "suspect": "크리스토프",
+  "victim": "트루먼 버뱅크",
+  "summary": "크리스토프는 트루먼이 방송 출연 사실을 모르는 상태에서 그의 일상을 촬영하고 공개한다. 생활 기반을 제공했다는 사정이 사생활 공개와 상업적 이용을 정당화할 수 있는지가 쟁점이다.",
+  "progress": "T01: 트루먼은 출생 이후 방송의 중심인물로 성장하지만, 촬영과 방송 사실을 알지 못한다.\nT02: 가족과 친구 역할의 배우들이 그의 주변에서 생활하고, 숨겨진 카메라가 일상을 기록한다.\nT03: 방송에는 상품 광고가 결합되며, 트루먼의 생활이 상업적 콘텐츠로 이용된다.\nT04: 크리스토프는 자신이 만든 세계가 트루먼을 보호한다는 취지로 방송을 옹호한다."
+}
+
+### 3. 다시 만들기 : 2번에서 받은 처분 6개를 excludeSentences 에 넣는다 · 기대 결과 = 6개 모두 다른 처분
+# 아래는 예시 · 실제로는 2번 결과의 sentence 6개로 바꿔 넣는다 (여러 번 다시 만들면 계속 누적해서 보낸다)
+WEBSOCKET ws://localhost:8080/ws/admin/penalty-draft
+Content-Type: application/json
+
+{ "type": "auth", "token": "{{adminToken}}" }
+===
+{
+  "type": "draft",
+  "step": "PENALTY",
+  "workId": 1,
+  "question": "보호와 양육을 제공했더라도, 당사자 몰래 일상을 방송한 책임을 물을 수 있는가?",
+  "suspect": "크리스토프",
+  "victim": "트루먼 버뱅크",
+  "summary": "크리스토프는 트루먼이 방송 출연 사실을 모르는 상태에서 그의 일상을 촬영하고 공개한다. 생활 기반을 제공했다는 사정이 사생활 공개와 상업적 이용을 정당화할 수 있는지가 쟁점이다.",
+  "progress": "T01: 트루먼은 출생 이후 방송의 중심인물로 성장하지만, 촬영과 방송 사실을 알지 못한다.\nT02: 가족과 친구 역할의 배우들이 그의 주변에서 생활하고, 숨겨진 카메라가 일상을 기록한다.\nT03: 방송에는 상품 광고가 결합되며, 트루먼의 생활이 상업적 콘텐츠로 이용된다.\nT04: 크리스토프는 자신이 만든 세계가 트루먼을 보호한다는 취지로 방송을 옹호한다.",
+  "excludeSentences": [
+    "혐의 완전 해소 및 공개 사과 받음",
+    "처분 없음",
+    "방송 윤리 교육 이수",
+    "쇼 총괄 연출 자격 박탈",
+    "방송국 영구 퇴출 및 배상",
+    "씨헤이븐 세트장 폐쇄와 평생 방송 금지"
+  ]
+}
+
+### 4. 요청값 오류 : step 틀림 / 없는 작품 / 사건 필드 빠짐 · 기대 결과 = error { status: 400, code: WS_DRAFT_REQUEST_INVALID } 3번 · 연결은 유지
+WEBSOCKET ws://localhost:8080/ws/admin/penalty-draft
+Content-Type: application/json
+
+{ "type": "auth", "token": "{{adminToken}}" }
+===
+{ "type": "draft", "step": "CARDS", "workId": 1,
+  "question": "쟁점", "suspect": "피의자", "victim": "피해자", "summary": "개요", "progress": "경과" }
+===
+{ "type": "draft", "step": "PENALTY", "workId": 9999,
+  "question": "쟁점", "suspect": "피의자", "victim": "피해자", "summary": "개요", "progress": "경과" }
+===
+{ "type": "draft", "step": "PENALTY", "workId": 1, "question": "쟁점" }
+
+### 5. 인증 실패 : 잘못된 토큰 · 기대 결과 = 연결이 1008 로 닫힘
+WEBSOCKET ws://localhost:8080/ws/admin/penalty-draft
+Content-Type: application/json
+
+{ "type": "auth", "token": "wrong-token" }
