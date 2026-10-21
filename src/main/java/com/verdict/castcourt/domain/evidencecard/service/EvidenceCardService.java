@@ -119,10 +119,10 @@ public class EvidenceCardService {
 
     private void validateUpdateCards(List<EvidenceCardUpdateDTO> cards) {
         if (cards == null || cards.isEmpty()) {
-            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+            return;
         }
         for (EvidenceCardUpdateDTO card : cards) {
-            if (card.getId() == null) {
+            if (card.getId() == null || card.getId() < 1) {
                 throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
             }
             String title = card.getTitle();

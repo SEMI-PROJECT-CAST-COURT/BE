@@ -1,6 +1,9 @@
 package com.verdict.castcourt.domain.category.service;
 
-import com.verdict.castcourt.domain.category.controller.CategoryApiException;
+import com.verdict.castcourt.global.exception.BusinessException;
+import com.verdict.castcourt.global.exception.ErrorCode;
+
+
 import com.verdict.castcourt.domain.category.dto.CategoryResponse;
 import com.verdict.castcourt.domain.category.entity.Category;
 import com.verdict.castcourt.domain.category.repository.CategoryRepository;
@@ -14,8 +17,10 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class CategoryService {
     private final CategoryRepository categoryRepository;
-    public CategoryService(CategoryRepository categoryRepository) {
+    private final com.verdict.castcourt.domain.work.repository.WorkRepository works;
+    public CategoryService(CategoryRepository categoryRepository, com.verdict.castcourt.domain.work.repository.WorkRepository works) {
         this.categoryRepository = categoryRepository;
+        this.works = works;
     }
 
     public List<CategoryResponse> getCategories() {
@@ -30,11 +35,11 @@ public class CategoryService {
     @Transactional
     public Integer createCategory(String rawName) {
         if (rawName == null || rawName.isBlank()) {
-            throw new CategoryApiException(400, "CATEGORY_NAME_INVALID", "카테고리 이름을 입력해 주세요.");
+            throw new IllegalArgumentException("카테고리 이름을 입력해 주세요.");
         }
         String name = rawName.strip();
         if (name.codePointCount(0, name.length()) > 10) {
-            throw new CategoryApiException(400, "CATEGORY_NAME_TOO_LONG", "카테고리 이름은 10자 이하여야 합니다.");
+            throw new BusinessException(ErrorCode.CATEGORY_NAME_TOO_LONG);
         }
         if (categoryRepository.existsByName(name)) {
             throw duplicateName();
@@ -53,20 +58,16 @@ public class CategoryService {
     @Transactional
     public void renameCategory(Integer categoryId, String rawName) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CategoryApiException(
-                        404, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
         if (category.isFixed()) {
-            throw new CategoryApiException(
-                    400, "FIXED_CATEGORY_IMMUTABLE", "미분류 카테고리는 수정할 수 없습니다.");
+            throw new BusinessException(ErrorCode.FIXED_CATEGORY_IMMUTABLE);
         }
         if (rawName == null || rawName.isBlank()) {
-            throw new CategoryApiException(
-                    400, "CATEGORY_NAME_INVALID", "카테고리 이름을 입력해 주세요.");
+            throw new IllegalArgumentException("카테고리 이름을 입력해 주세요.");
         }
         String name = rawName.strip();
         if (name.codePointCount(0, name.length()) > 10) {
-            throw new CategoryApiException(
-                    400, "CATEGORY_NAME_TOO_LONG", "카테고리 이름은 10자 이하여야 합니다.");
+            throw new BusinessException(ErrorCode.CATEGORY_NAME_TOO_LONG);
         }
         if (categoryRepository.existsByNameAndIdNot(name, categoryId)) {
             throw duplicateName();
@@ -79,7 +80,48 @@ public class CategoryService {
         }
     }
 
-    private CategoryApiException duplicateName() {
-        return new CategoryApiException(400, "CATEGORY_NAME_DUPLICATE", "이미 존재하는 카테고리 이름입니다.");
+    @Transactional
+    public void reorderCategories(List<Integer> categoryIds) {
+        if (categoryIds == null || categoryIds.stream().anyMatch(java.util.Objects::isNull)) {
+            throw invalidOrder();
+        }
+        var categories = categoryRepository.findAll();
+        var normalCategories = categories.stream().filter(category -> !category.isFixed())
+                .collect(java.util.stream.Collectors.toMap(Category::getId, category -> category));
+        var requestedIds = new java.util.HashSet<>(categoryIds);
+        if (requestedIds.size() != categoryIds.size()
+                || !requestedIds.equals(normalCategories.keySet())) {
+            throw invalidOrder();
+        }
+        for (int index = 0; index < categoryIds.size(); index++) {
+            normalCategories.get(categoryIds.get(index)).changeOrder(index + 1);
+        }
+        // 미분류의 ID는 요청에 포함하지 않고 서버에서 마지막 순서로 유지.
+        categories.stream().filter(Category::isFixed)
+                .forEach(category -> category.changeOrder(categoryIds.size() + 1));
+        categoryRepository.flush();
+    }
+
+    private BusinessException invalidOrder() {
+        return new BusinessException(ErrorCode.INVALID_CATEGORY_ORDER);
+    }
+
+    private BusinessException duplicateName() {
+        return new BusinessException(ErrorCode.CATEGORY_NAME_DUPLICATE);
+    }
+
+    @Transactional
+    public void delete(Integer categoryId) {
+        var category = categoryRepository.findById(categoryId).orElseThrow(() ->
+                new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+        if (category.isFixed()) {
+            throw new BusinessException(ErrorCode.FIXED_CATEGORY_DELETE_FORBIDDEN);
+        }
+        var fixed = categoryRepository.findByName("미분류").orElseThrow(() ->
+                new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR));
+        // 소프트 삭제된 작품도 FK를 참조하므로 모두 이동한 뒤 실제 행을 삭제한다.
+        works.moveToCategory(categoryId, fixed);
+        categoryRepository.delete(category);
+        categoryRepository.flush();
     }
 }
