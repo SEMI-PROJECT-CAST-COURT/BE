@@ -2,7 +2,6 @@ package com.verdict.castcourt.domain.evidencecard.service;
 
 import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardDTO;
 import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardResponseDTO;
-import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardUpdateDTO;
 import com.verdict.castcourt.domain.evidencecard.entity.EvidenceCardEntity;
 import com.verdict.castcourt.domain.evidencecard.repository.EvidenceCardRepository;
 import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
@@ -96,35 +95,55 @@ public class EvidenceCardService {
     }
 
     @Transactional
-    public void updateEvidenceCards(int caseId, List<EvidenceCardUpdateDTO> cards) {
+    public void updateEvidenceCards(WorkCaseEntity workCase, List<EvidenceCardDTO> cards) {
         validateUpdateCards(cards);
 
-        List<Integer> ids = cards.stream().map(EvidenceCardUpdateDTO::getId).distinct().toList();
+        List<EvidenceCardDTO> saveList = cards.stream().filter(e -> e.getId() == null).toList();
+
+        List<EvidenceCardEntity> evidenceCards = saveList
+                .stream()
+                .map(e -> new EvidenceCardEntity(
+                        workCase,
+                        e.getSide(),
+                        e.getTitle(),
+                        e.getBody(),
+                        e.getWeight()
+                ))
+                .toList();
+
+        evidenceCardRepository.saveAll(evidenceCards);
+
+        List<Integer> ids = cards.stream().map(EvidenceCardDTO::getId).distinct().toList();
         if (ids.size() != cards.size()) {
             throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
         }
 
         Map<Integer, EvidenceCardEntity> cardMap = evidenceCardRepository
-                .findByIdInAndWorkCaseId(ids, caseId).stream()
+                .findByIdInAndWorkCaseId(ids, workCase.getId()).stream()
                 .collect(Collectors.toMap(EvidenceCardEntity::getId, Function.identity()));
 
         if (cardMap.size() != ids.size()) {
             throw new BusinessException(ErrorCode.EVIDENCE_CARD_NOT_FOUND);
         }
 
-        for (EvidenceCardUpdateDTO card : cards) {
+        for (EvidenceCardDTO card : cards) {
             cardMap.get(card.getId()).update(card.getTitle(), card.getBody(), card.getWeight());
         }
     }
 
-    private void validateUpdateCards(List<EvidenceCardUpdateDTO> cards) {
+    private void validateUpdateCards(List<EvidenceCardDTO> cards) {
         if (cards == null || cards.isEmpty()) {
             return;
         }
-        for (EvidenceCardUpdateDTO card : cards) {
+        for (EvidenceCardDTO card : cards) {
             if (card.getId() == null || card.getId() < 1) {
                 throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
             }
+            String side = card.getSide();
+            if (!"PROSECUTION".equals(side) || !"DEFENSE".equals(side)) {
+                throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+            }
+
             String title = card.getTitle();
             if (title != null && (title.isBlank() || title.length() > 20)) {
                 throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
