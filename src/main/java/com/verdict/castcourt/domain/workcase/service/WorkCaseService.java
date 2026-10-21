@@ -2,7 +2,6 @@ package com.verdict.castcourt.domain.workcase.service;
 
 import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardDTO;
 import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardResponseDTO;
-import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardUpdateDTO;
 import com.verdict.castcourt.domain.evidencecard.entity.EvidenceCardEntity;
 import com.verdict.castcourt.domain.evidencecard.service.EvidenceCardService;
 import com.verdict.castcourt.domain.penaltytier.dto.PenaltyTierDTO;
@@ -18,6 +17,7 @@ import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseUpdateDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.*;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO.ProgressResponse;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.MyVerdictsResponse;
+import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.VerdictResponse;
 import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
 import com.verdict.castcourt.domain.workcase.repository.WorkCaseRepository;
 import com.verdict.castcourt.global.exception.BusinessException;
@@ -25,14 +25,8 @@ import com.verdict.castcourt.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseSummaryResponseDTO.*;
 
-
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -215,10 +209,10 @@ public class WorkCaseService {
                 requestDTO.victim(), requestDTO.summary(), requestDTO.progress()
         );
 
+        // 추가, 수정할 근거카드 목록 - cards (id가 null 또는 0이면 새 카드 등록)
+        evidenceCardService.updateEvidenceCards(workCase, requestDTO.cards());
         // 삭제할 근거카드 목록 - Integer 배열
         evidenceCardService.deleteEvidenceCards(caseId, requestDTO.deletedCardIds());
-        // 수정할 근거카드 목록 - cards
-        evidenceCardService.updateEvidenceCards(caseId, requestDTO.cards());
         // 형벌표 수정
         penaltyTierService.updatePenaltyTiers(caseId, requestDTO.penalties());
     }
@@ -341,7 +335,7 @@ public class WorkCaseService {
         if (requestDTO.cards() != null && requestDTO.deletedCardIds() != null) {
             Set<Integer> deletedIds = new HashSet<>(requestDTO.deletedCardIds());
             boolean overlapped = requestDTO.cards().stream()
-                    .map(EvidenceCardUpdateDTO::getId)
+                    .map(EvidenceCardDTO::getId)
                     .anyMatch(deletedIds::contains);
             if (overlapped)
                 throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
