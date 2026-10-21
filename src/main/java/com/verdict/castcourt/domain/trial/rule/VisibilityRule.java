@@ -3,7 +3,7 @@ package com.verdict.castcourt.domain.trial.rule;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 
 /* 모드별 공개 범위 (TrialMode 주석 · API 명세 그대로)
- *  재판 시작 · 재판 상태 응답과 발언 제출 SSE(6장)가 같은 규칙을 쓴다
+ *  재판 시작 · 재판 상태 응답과 발언 제출 SSE가 같은 규칙을 쓴다
  *
  *  | 공개 항목          | CHICKEN | CHALLENGER | IRON |
  *  | 게이지 · 변화량     |    O    |     O      |  X   |
@@ -40,4 +40,4 @@ public final class VisibilityRule {
     public static boolean showsProgress(TrialMode mode) {
         return mode == TrialMode.CHALLENGER;
     }
-}
+}

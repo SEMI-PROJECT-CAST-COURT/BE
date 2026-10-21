@@ -1,14 +1,15 @@
 package com.verdict.castcourt.domain.speaking.controller;
 
-import com.verdict.castcourt.domain.speaking.dto.SpeakingRequestDTO;
+import com.verdict.castcourt.domain.speaking.dto.request.SpeakingRequestDTO;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
+import com.verdict.castcourt.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -27,7 +28,6 @@ public class SpeakingController {
      *  - 반환 타입 SseEmitter : 이 메서드가 끝나도 응답은 열린 채로 남고, 서비스가 complete() 할 때 끝난다
      *  - 검사 실패(400 · 403 · 404)는 SSE 를 열기 전이라 평소처럼 JSON 오류 응답이 나간다
      * */
-    // TODO(연결): 로그인이 붙으면 X-User-Id 헤더 대신 로그인 사용자 id 사용
     @Operation(summary = "발언 제출 (SSE)", description = """
             내 발언을 보내면 판정과 AI 상대 발언을 SSE(text/event-stream)로 조금씩 돌려줍니다.
             이벤트 순서 : judge → opponent_delta(여러 번) → opponent_judge → stage(단계가 바뀔 때만) → turn_done
@@ -36,10 +36,10 @@ public class SpeakingController {
             """)
     @PostMapping(value = "/api/trials/{trialId}/speakings", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter submit(
-            @RequestHeader(name = "X-User-Id", defaultValue = "4") int userId,
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable String trialId,
             @RequestBody SpeakingRequestDTO request
     ) {
-        return speakingService.submit(userId, trialId, request);
+        return speakingService.submit(user.getId(), trialId, request);
     }
 }

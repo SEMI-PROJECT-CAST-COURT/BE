@@ -41,4 +41,17 @@ public class Work {
     public String getAuthor() { return author; }
     public LocalDate getReleasedOn() { return releasedOn; }
     public String getSummary() { return summary; }
-    public String getPoster() { return poster; }}
+    public String getPoster() { return poster; }
+
+    public void deactivate() { this.isUsage = false; }
+    public boolean isUsage() { return isUsage; }
+
+    public void update(Category category, String title, String author, LocalDate releasedOn,
+                       String summary, String poster) {
+        this.category = category;
+        this.title = title;
+        this.author = author;
+        this.releasedOn = releasedOn;
+        this.summary = summary;
+        this.poster = poster;
+    }}

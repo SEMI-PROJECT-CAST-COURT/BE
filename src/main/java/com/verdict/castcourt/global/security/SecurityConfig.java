@@ -50,6 +50,11 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/signup/admin").hasAuthority("SUPER_ADMIN")
                     .requestMatchers(HttpMethod.GET, "/account/admin").hasAuthority("SUPER_ADMIN")
                     .requestMatchers(HttpMethod.DELETE, "/admin/{id}").hasAuthority("SUPER_ADMIN")
+                    // category / work
+                    .requestMatchers(HttpMethod.GET, "/api/categories", "/images/default-poster.svg").permitAll()
+                    .requestMatchers("/api/admin/categories", "/api/admin/categories/**",
+                            "/api/admin/works", "/api/admin/works/**").hasAnyAuthority("SUPER_ADMIN", "ADMIN")
+                    .requestMatchers("/api/works", "/api/works/**").authenticated()
                     // work_case
                     .requestMatchers("/api/admin/cases", "/api/admin/cases/**").hasAnyAuthority("SUPER_ADMIN", "ADMIN")
                     // websocket : 핸드셰이크에는 토큰을 붙일 수 없어 열어 두고, 첫 메시지 auth 로 핸들러가 인증한다

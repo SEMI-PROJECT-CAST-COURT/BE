@@ -20,6 +20,15 @@ public record CaseSnapshot(
         List<Penalty> penalties // 형벌표 6단계
 ) {
 
+    /* 형벌표에서 그 단계의 처분 문장 · 형벌표에 그 단계가 없으면 null (판결 받기 · 재판 기록 응답) */
+    public String sentenceOf(int tier) {
+        return penalties.stream()
+                .filter(penalty -> penalty.tier() == tier)
+                .map(Penalty::sentence)
+                .findFirst()
+                .orElse(null);
+    }
+
     /* 근거 카드 한 장 */
     public record Card(
             Integer cardId,

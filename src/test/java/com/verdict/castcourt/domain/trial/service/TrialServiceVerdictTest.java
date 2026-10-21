@@ -1,9 +1,11 @@
 package com.verdict.castcourt.domain.trial.service;
 
-import com.verdict.castcourt.domain.speaking.ai.VerdictAi;
+import com.verdict.castcourt.domain.account.entity.AccountEntity;
+import com.verdict.castcourt.domain.account.repository.AccountRepository;
+import com.verdict.castcourt.domain.speaking.ai.model.VerdictAi;
 import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
 import com.verdict.castcourt.domain.speaking.repository.SpeakingRepository;
-import com.verdict.castcourt.domain.trial.dto.TrialVerdictResponseDTO;
+import com.verdict.castcourt.domain.trial.dto.response.TrialVerdictResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialEntity;
@@ -12,6 +14,8 @@ import com.verdict.castcourt.domain.trial.repository.TrialRepository;
 import com.verdict.castcourt.domain.trial.rule.ScoreRule;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
 import com.verdict.castcourt.domain.trial.session.TrialSessionStore;
+import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
+import com.verdict.castcourt.domain.workcase.repository.WorkCaseRepository;
 import com.verdict.castcourt.global.ai.AiResult;
 import com.verdict.castcourt.global.ai.AiUsage;
 import com.verdict.castcourt.global.exception.BusinessException;
@@ -54,7 +58,7 @@ class TrialServiceVerdictTest {
     private final TrialSessionStore trialSessionStore = new TrialSessionStore();
 
     // 판사 총평 AI : 메서드가 하나뿐인 인터페이스라 람다로 만든다 (테스트마다 바꿔 끼운다)
-    private VerdictAi verdictAi = session -> new AiResult<>(SUMMARY, AiUsage.fake(LocalDateTime.now(), 0));
+    private VerdictAi verdictAi = session -> new AiResult<>(SUMMARY, new AiUsage("test-model", 0, 0, LocalDateTime.now(), 0));
 
     private TrialService trialService;
 
@@ -142,12 +146,21 @@ class TrialServiceVerdictTest {
     void writer() {
         TrialRepository repository = mock(TrialRepository.class);
         SpeakingRepository speakingRepository = mock(SpeakingRepository.class);
+        WorkCaseRepository workCaseRepository = mock(WorkCaseRepository.class);
+        AccountRepository accountRepository = mock(AccountRepository.class);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        WorkCaseEntity workCase = new WorkCaseEntity();
+        AccountEntity user = new AccountEntity();
+        when(workCaseRepository.getReferenceById(7)).thenReturn(workCase);
+        when(accountRepository.getReferenceById(4)).thenReturn(user);
         TrialSession session = session(Side.PROSECUTION);
         finish(session);
 
-        TrialEntity trial = new TrialVerdictWriter(repository, speakingRepository).save(session, 3, SUMMARY);
+        TrialEntity trial = new TrialVerdictWriter(repository, speakingRepository, workCaseRepository, accountRepository)
+                .save(session, 3, SUMMARY);
 
+        assertSame(workCase, trial.getWorkCase());          // 사건 7 · 사용자 4 의 대리 객체가 들어갔는지
+        assertSame(user, trial.getUser());
         assertEquals(session.usedCardIds(), trial.getCardIds());
         assertEquals(SUMMARY, trial.getJudgeSummary());
 
@@ -160,9 +173,9 @@ class TrialServiceVerdictTest {
         assertSame(trial, speakings.getFirst().getTrial());
     }
 
-    // 생성자 주입 · SpeakingService 는 판결 받기에서 쓰지 않아서 null
+    // 생성자 주입 · SpeakingService · SpeakingRepository 는 판결 받기에서 쓰지 않아서 null
     private TrialService newService() {
-        return new TrialService(trialRepository, null, trialSessionStore, null, verdictAi, trialVerdictWriter);
+        return new TrialService(trialRepository, null, trialSessionStore, null, verdictAi, trialVerdictWriter, null);
     }
 
     // 카드 2장(11 · 12) · 형벌표 6단계 · userId 4 · 사건 7
@@ -192,7 +205,7 @@ class TrialServiceVerdictTest {
 
     // DB 가 id 10 을 붙여 저장했다고 친 재판
     private static TrialEntity savedTrial(TrialSession session, int tier) {
-        TrialEntity trial = new TrialEntity(session.getWorkCaseId(), session.getUserId(), session.getRole(),
+        TrialEntity trial = new TrialEntity(new WorkCaseEntity(), new AccountEntity(), session.getRole(),
                 session.getMode(), session.usedCardIds(), session.getScore(), tier, SUMMARY, session.getSnapshot());
         ReflectionTestUtils.setField(trial, "id", 10);
         return trial;

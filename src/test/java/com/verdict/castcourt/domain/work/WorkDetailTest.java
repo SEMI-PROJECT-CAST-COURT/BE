@@ -1,4 +1,5 @@
 package com.verdict.castcourt.domain.work;
+import com.verdict.castcourt.global.exception.BusinessException;
 
 import com.verdict.castcourt.domain.category.entity.Category;
 import com.verdict.castcourt.domain.work.controller.WorkController;
@@ -6,9 +7,9 @@ import com.verdict.castcourt.domain.work.entity.Work;
 import com.verdict.castcourt.domain.work.repository.WorkRepository;
 import com.verdict.castcourt.domain.work.service.*;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +26,7 @@ class WorkDetailTest {
         id.setAccessible(true);
         id.set(work, 1);
         when(repository.findActiveById(1)).thenReturn(Optional.of(work));
-        var result = new WorkDetailService(repository).getWork(1);
+        var result = new WorkService(repository, mock(com.verdict.castcourt.domain.work.repository.WorkListRepository.class), mock(com.verdict.castcourt.domain.category.repository.CategoryRepository.class), mock(PosterStorage.class)).getWork(1);
         assertEquals(1, result.workId());
         assertEquals("작품", result.title());
         assertEquals("영화", result.category());
@@ -39,25 +40,18 @@ class WorkDetailTest {
     @Test void missingOrInactiveWorkReturns404() {
         var repository = mock(WorkRepository.class);
         when(repository.findActiveById(1)).thenReturn(Optional.empty());
-        var error = assertThrows(WorkListException.class,
-                () -> new WorkDetailService(repository).getWork(1));
-        assertEquals(404, error.getStatus());
-        assertEquals("WORK_NOT_FOUND", error.getCode());
+        var error = assertThrows(BusinessException.class,
+                () -> new WorkService(repository, mock(com.verdict.castcourt.domain.work.repository.WorkListRepository.class), mock(com.verdict.castcourt.domain.category.repository.CategoryRepository.class), mock(PosterStorage.class)).getWork(1));
+        assertEquals(404, error.getErrorCode().getStatus().value());
+        assertEquals("WORK_NOT_FOUND", error.getErrorCode().getCode());
         assertEquals("작품을 찾을 수 없습니다.", error.getMessage());
     }
 
-    @Test void controllerRejectsUnauthenticatedRequests() {
-        var details = mock(WorkDetailService.class);
-        var controller = new WorkController(mock(WorkListService.class), details);
-        assertEquals(401, assertThrows(WorkListException.class,
-                () -> controller.getWork(1, null)).getStatus());
-        var anonymous = new AnonymousAuthenticationToken("key", "anonymous",
-                List.of(new SimpleGrantedAuthority("ROLE_ANONYMOUS")));
-        assertThrows(WorkListException.class, () -> controller.getWork(1, anonymous));
-        verifyNoInteractions(details);
-        var user = new UsernamePasswordAuthenticationToken("user", "",
-                List.of(new SimpleGrantedAuthority("USER")));
-        controller.getWork(1,user);
-        verify(details).getWork(1);
+    @Test
+    void controllerDelegatesDetailLookup() {
+        var service = mock(WorkService.class);
+        var controller = new WorkController(service);
+        controller.getWork(1);
+        verify(service).getWork(1);
     }
 }

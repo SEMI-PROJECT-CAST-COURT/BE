@@ -12,10 +12,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.time.Duration;
+import java.time.Instant;
 
 /* 진행 중인 재판 한 판 (서버 메모리에만 있고 DB 에는 없다)
- *  판결 때 TrialEntity · SpeakingEntity 로 바뀌어 저장된다. (7장)
- *  발언 처리는 복사본(copy)에서 하고, 성공했을 때만 applyFrom 으로 반영한다. (6장)
+ *  판결 때 TrialEntity · SpeakingEntity 로 바뀌어 저장된다.
+ *  발언 처리는 복사본(copy)에서 하고, 성공했을 때만 applyFrom 으로 반영한다.
  * */
 @Getter
 public class TrialSession {
@@ -38,6 +40,8 @@ public class TrialSession {
 
     private int failCount;          // AI 실패 연속 횟수 (성공하면 0)
 
+    // 마지막 활동 시각 · 재판 시작(생성) · 발언 제출 때 바뀐다 (발언 스레드가 바꾸고 조회 스레드가 읽어서 volatile)
+    private volatile Instant lastActiveAt = Instant.now();
     // 발언 처리 중인지 · 같은 재판에 발언이 동시에 두 번 들어오지 못하게 막는다 (밖에서 직접 못 만지게 @Getter 제외)
     @Getter(AccessLevel.NONE)
     private final AtomicBoolean processing = new AtomicBoolean(false);
@@ -64,7 +68,7 @@ public class TrialSession {
         return drawnCardIds.subList(0, cardCount);
     }
 
-    /* 발언이 전부 끝났는지 (끝나면 판결 받기 가능 · 7장) */
+    /* 발언이 전부 끝났는지 (끝나면 판결 받기 가능) */
     public boolean isFinished() {
         return speakings.size() == TrialTurnOrder.totalCount(cardCount);
     }
@@ -140,6 +144,16 @@ public class TrialSession {
     /* 발언 처리 끝 (여러 번 불러도 안전) */
     public void endTurn() {
         processing.set(false);
+    }
+
+    /* 활동 기록 : 마지막 활동 시각을 now 로 바꾼다 (부르는 쪽이 Instant.now() 를 넘긴다) */
+    public void touch(Instant now) {
+        lastActiveAt = now;
+    }
+
+    /* 버려진 판인지 : 마지막 활동 뒤 idleTimeout 이 지났으면 true */
+    public boolean isIdle(Instant now, Duration idleTimeout) {
+        return lastActiveAt.plus(idleTimeout).isBefore(now);
     }
 
     /* 밖에서 목록을 고치지 못하게 읽기 전용으로 준다 */

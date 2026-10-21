@@ -18,6 +18,7 @@ public class Category {
         this.name = name;
         this.sortOrder = sortOrder;
     }
+    public void changeOrder(int sortOrder) { this.sortOrder = sortOrder; }
     public void rename(String name) { this.name = name; }
     public Integer getId() { return id; }
     public String getName() { return name; }

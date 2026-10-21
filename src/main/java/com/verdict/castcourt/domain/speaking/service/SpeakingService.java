@@ -1,14 +1,14 @@
 package com.verdict.castcourt.domain.speaking.service;
 
-import com.verdict.castcourt.domain.speaking.ai.JudgeAi;
-import com.verdict.castcourt.domain.speaking.ai.JudgeResult;
-import com.verdict.castcourt.domain.speaking.ai.OpponentAi;
-import com.verdict.castcourt.domain.speaking.dto.SpeakingErrorEventDTO;
-import com.verdict.castcourt.domain.speaking.dto.SpeakingJudgeEventDTO;
-import com.verdict.castcourt.domain.speaking.dto.SpeakingRequestDTO;
-import com.verdict.castcourt.domain.speaking.dto.SpeakingStageEventDTO;
-import com.verdict.castcourt.domain.speaking.dto.SpeakingTextEventDTO;
-import com.verdict.castcourt.domain.speaking.dto.SpeakingTurnDoneEventDTO;
+import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
+import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
+import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
+import com.verdict.castcourt.domain.speaking.dto.response.SpeakingErrorEventDTO;
+import com.verdict.castcourt.domain.speaking.dto.response.SpeakingJudgeEventDTO;
+import com.verdict.castcourt.domain.speaking.dto.request.SpeakingRequestDTO;
+import com.verdict.castcourt.domain.speaking.dto.response.SpeakingStageEventDTO;
+import com.verdict.castcourt.domain.speaking.dto.response.SpeakingTextEventDTO;
+import com.verdict.castcourt.domain.speaking.dto.response.SpeakingTurnDoneEventDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
 import com.verdict.castcourt.domain.trial.session.TrialSessionSpeaking;
@@ -22,6 +22,7 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Instant;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
@@ -52,7 +53,7 @@ public class SpeakingService {
     static final String EVENT_ERROR = "error";
 
     private final TrialSessionStore trialSessionStore;
-    private final JudgeAi judgeAi;              // 가짜 / 실제 중 설정값으로 정해진 하나 (5장)
+    private final JudgeAi judgeAi;
     private final OpponentAi opponentAi;
     private final TaskExecutor taskExecutor;
 
@@ -75,6 +76,8 @@ public class SpeakingService {
         if (!session.tryStartTurn()) {
             throw new BusinessException(ErrorCode.SPEAKING_NOT_YOUR_TURN);
         }
+
+        session.touch(Instant.now());      // 발언 제출도 활동으로 본다 (30분 무활동 정리 기준)
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
 
@@ -199,7 +202,7 @@ public class SpeakingService {
         }
     }
 
-    // 판사 AI 로 판정하고 기록한다 // TODO(연결) 8-4 judge 결과의 usage 를 ai_call_log 에 저장 (role = JUDGE)
+    // 판사 AI 로 판정하고 기록한다
     private TrialSessionSpeaking judgeAndRecord(TrialSession session, String content) {
 
         JudgeResult judged = callAi(() -> judgeAi.judge(session, content).output(), ErrorCode.AI_JUDGE_FAILED);
@@ -207,7 +210,7 @@ public class SpeakingService {
                 judged.weight());
     }
 
-    // 상대 AI 발언 // TODO(연결) 8-4 usage 를 ai_call_log 에 저장 (role = PROSECUTION / DEFENSE)
+    // 상대 AI 발언
     private String speakOpponent(TrialSession session, Consumer<String> onDelta) {
         return callAi(() -> opponentAi.speak(session, onDelta).output(), ErrorCode.AI_OPPONENT_FAILED);
     }
