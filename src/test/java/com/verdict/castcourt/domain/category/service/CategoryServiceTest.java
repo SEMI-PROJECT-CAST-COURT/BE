@@ -36,14 +36,16 @@ class CategoryServiceTest {
 
     @Test
     void addsAfterNormalCategoriesAndTrimsName() {
+        var fixed = new Category("미분류", 3);
         when(repository.findAll()).thenReturn(List.of(
-                new Category("영화", 1), new Category("게임", 2), new Category("미분류", 999)));
+                new Category("영화", 1), new Category("게임", 2), fixed));
         when(repository.saveAndFlush(any(Category.class))).thenAnswer(call -> call.getArgument(0));
         service.createCategory("  판타지  ");
         ArgumentCaptor<Category> saved = ArgumentCaptor.forClass(Category.class);
         verify(repository).saveAndFlush(saved.capture());
         assertEquals("판타지", saved.getValue().getName());
         assertEquals(3, saved.getValue().getSortOrder());
+        assertEquals(4, fixed.getSortOrder());
     }
 
     @Test

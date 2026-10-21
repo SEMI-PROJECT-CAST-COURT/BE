@@ -44,10 +44,13 @@ public class CategoryService {
         if (categoryRepository.existsByName(name)) {
             throw duplicateName();
         }
-        int order = categoryRepository.findAll().stream()
+        var categories = categoryRepository.findAll();
+        int order = categories.stream()
                 .filter(category -> !category.isFixed())
                 .mapToInt(Category::getSortOrder).max().orElse(0) + 1;
         try {
+            categories.stream().filter(Category::isFixed)
+                    .forEach(category -> category.changeOrder(order + 1));
             return categoryRepository.saveAndFlush(new Category(name, order)).getId();
         } catch (DataIntegrityViolationException exception) {
             // 사전 조회 후 다른 요청이 같은 이름을 등록한 경우도 동일하게 처리.
