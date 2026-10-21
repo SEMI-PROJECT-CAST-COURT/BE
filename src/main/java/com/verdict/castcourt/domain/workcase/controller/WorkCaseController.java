@@ -1,6 +1,7 @@
 package com.verdict.castcourt.domain.workcase.controller;
 
 import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseRequestDTO;
+import com.verdict.castcourt.domain.workcase.dto.request.WorkCaseUpdateDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseDetailResponseDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCaseListResponseDTO;
 import com.verdict.castcourt.domain.workcase.dto.response.WorkCasePrepareResponseDTO;
@@ -10,6 +11,7 @@ import com.verdict.castcourt.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -92,5 +94,42 @@ public class WorkCaseController {
                 201,
                 workCaseService.saveWorkCase(requestDTO)
         );
+    }
+
+    /* 사건 수정 */
+    @Operation(summary = "사건 수정",
+            description = "관리자가 사건 정보와 근거 카드, 형벌표를 수정합니다. 성공 시 본문 없이 200을 응답합니다. " +
+                    "하나라도 검증에 실패하면 사건 · 카드 · 형벌표 모두 수정되지 않습니다. " +
+                    "사건 정보(question · suspect · victim · summary · progress)는 전체를 교체하며, " +
+                    "question은 1~100자, suspect · victim은 1~50자, summary는 1~1000자, progress는 1~1000자입니다. " +
+                    "cards는 추가 · 수정할 카드 목록이며 빈 목록이면 카드를 추가 · 수정하지 않습니다. " +
+                    "id가 없거나(null) 0이면 새 카드로 등록하고, 1 이상이면 해당 카드를 수정합니다. " +
+                    "카드마다 side · title · body · weight를 모두 보내야 하며, side는 PROSECUTION / DEFENSE, title은 1~20자, body는 1~70자, weight는 1~20입니다. " +
+                    "기존 카드의 side는 변경되지 않습니다. " +
+                    "deletedCardIds는 삭제할 카드 id 목록이며, cards와 겹치는 id가 있으면 안 됩니다. " +
+                    "카드 추가 · 수정 후 삭제를 처리하며, 새로 추가한 카드를 포함해 삭제 후 side별로 3장 이상 남아야 합니다. " +
+                    "penalties는 보낸 tier의 sentence만 수정하며(1~50자), 보내지 않은 tier는 기존 값을 유지합니다. " +
+                    "사건이 없거나 삭제된 경우 CASE_NOT_FOUND(404), 입력값이 잘못되거나 cards와 deletedCardIds가 겹치거나 cards에 같은 id가 중복되면 CASE_INPUT_INVALID(400), " +
+                    "progress가 1000자를 넘으면 CASE_PROGRESS_TOO_LONG(400), 카드 가중치가 범위를 벗어나면 CARD_WEIGHT_INVALID(400), " +
+                    "사건에 없는 카드 id가 포함되면 EVIDENCE_CARD_NOT_FOUND(404), 삭제 후 카드가 side별 3장 미만이면 CASE_CARD_COUNT_INSUFFICIENT(400), " +
+                    "형벌표 단계가 중복되거나 범위를 벗어나면 PENALTY_TIER_COUNT_INVALID(400)를 응답합니다.")
+    @PutMapping("/api/admin/cases/{caseId}")
+    public void updateWorkCase(
+            @PathVariable("caseId") int caseId,
+            @RequestBody WorkCaseUpdateDTO requestDTO
+    ) {
+        workCaseService.updateWorkCase(caseId, requestDTO);
+    }
+
+    /* 사건 삭제 */
+    @Operation(summary = "사건 삭제",
+            description = "관리자가 사건을 삭제합니다. 성공 시 본문 없이 204를 응답합니다. " +
+                    "실제 데이터를 지우지 않고 삭제 여부(is_usage)만 변경하는 소프트 삭제이며, " +
+                    "삭제된 사건은 목록 · 상세 · 재판 준비 조회에서 제외됩니다. 근거 카드와 형벌표, 재판 기록은 그대로 유지됩니다. " +
+                    "사건이 없거나 이미 삭제된 경우 CASE_NOT_FOUND(404)를 응답합니다.")
+    @DeleteMapping("/api/admin/cases/{caseId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteWorkCase(@PathVariable("caseId") int caseId) {
+        workCaseService.deleteWorkCase(caseId);
     }
 }

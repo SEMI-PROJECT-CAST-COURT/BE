@@ -47,7 +47,7 @@ public class TrialCaseReader {
         }
 
         // 작품은 사건에 id 숫자로만 붙어 있어서 따로 읽는다 (findActiveById = 삭제되지 않은 작품만)
-        Optional<Work> work = workRepository.findActiveById(workCase.get().getWorkId());
+        Optional<Work> work = workRepository.findActiveById(workCase.get().getWork().getId());
         if (work.isEmpty()) {
             return Optional.empty();
         }
