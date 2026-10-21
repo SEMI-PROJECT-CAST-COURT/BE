@@ -43,10 +43,10 @@ public interface TrialRepository extends JpaRepository<TrialEntity, Integer> {
                    w.isUsage      AS workUsage
             FROM TrialEntity t
             JOIN t.workCase wc
-            JOIN Work w ON w.id = wc.workId
+            JOIN wc.work w ON w.id = wc.work.id
             WHERE t.user.id = :userId
               AND (:role IS NULL OR t.role = :role)
-              AND (:workId IS NULL OR wc.workId = :workId)
+              AND (:workId IS NULL OR wc.work.id = :workId)
               AND (:outcome IS NULL
                    OR (:outcome = 'WIN' AND ((t.role = DEFENSE AND t.penaltyTier <= 3)
                                           OR (t.role = PROSECUTION AND t.penaltyTier >= 4)))

@@ -47,7 +47,7 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
     /* 특정 작품에 속한 사건들의 근거 카드 전체 조회 - 목록 난이도 계산용 */
     @Query(
             "SELECT ec FROM EvidenceCardEntity ec " +
-                    "WHERE ec.workCase.workId = :workId " +
+                    "WHERE ec.workCase.work.id = :workId " +
                     "AND ec.workCase.isUsage = true"
     )
     List<EvidenceCardEntity> findEvidenceCardsByWorkId(@Param("workId") Integer workId);
@@ -55,7 +55,7 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
     /* 특정 작품에 속한 사건들의 형벌표 전체 조회 - 목록 조회용 */
     @Query(
             "SELECT pt FROM PenaltyTierEntity pt " +
-            "WHERE pt.workCase.workId = :workId " +
+            "WHERE pt.workCase.work.id = :workId " +
             "AND pt.workCase.isUsage = true " +
             "ORDER BY pt.tier"
     )
@@ -65,7 +65,7 @@ public interface WorkCaseRepository extends JpaRepository<WorkCaseEntity, Intege
     @Query(
             "SELECT t FROM TrialEntity t, WorkCaseEntity wc " +
             "WHERE wc.id = t.workCaseId " + // 재판과 사건 테이블의 JOIN 조건
-            "AND wc.workId = :workId " +    // 특정 작품에 속하면서
+            "AND wc.work.id = :workId " +    // 특정 작품에 속하면서
             "AND wc.isUsage = true " +      // 삭제되지 않은 사건에 대한
             "AND t.userId = :userId"        // 특정 유저의
     )
