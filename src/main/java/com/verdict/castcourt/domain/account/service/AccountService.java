@@ -95,7 +95,7 @@ public class AccountService {
          return accounts
                     .stream()
                     .filter(a -> !a.getAuthority().equals("USER"))
-                    .map(a -> new AccountDTO(a.getUsername(), a.getNickname(), a.isUsage()))
+                    .map(a -> new AccountDTO(a.getId(), a.getUsername(), a.getNickname(), a.isUsage()))
                     .toList();
     }
 
