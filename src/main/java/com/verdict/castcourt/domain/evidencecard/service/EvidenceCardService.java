@@ -2,7 +2,6 @@ package com.verdict.castcourt.domain.evidencecard.service;
 
 import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardDTO;
 import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardResponseDTO;
-import com.verdict.castcourt.domain.evidencecard.dto.EvidenceCardUpdateDTO;
 import com.verdict.castcourt.domain.evidencecard.entity.EvidenceCardEntity;
 import com.verdict.castcourt.domain.evidencecard.repository.EvidenceCardRepository;
 import com.verdict.castcourt.domain.workcase.entity.WorkCaseEntity;
@@ -39,10 +38,67 @@ public class EvidenceCardService {
     public void saveEvidenceCard(WorkCaseEntity workCaseEntity, List<EvidenceCardDTO> cards) {
         validateCards(cards);
 
+        long prosecutionCount = cards.stream().filter(e -> "PROSECUTION".equals(e.getSide())).count();
+        long defenseCount = cards.stream().filter(e -> "DEFENSE".equals(e.getSide())).count();
+
+        // 진영별 3장 이상
+        if (prosecutionCount < 3 || defenseCount < 3) {
+            throw new BusinessException(ErrorCode.CASE_CARD_COUNT_INSUFFICIENT);
+        }
+
         List<EvidenceCardEntity> evidenceCards = cards
                 .stream()
                 .map(e -> new EvidenceCardEntity(
                         workCaseEntity,
+                        e.getSide(),
+                        e.getTitle(),
+                        e.getBody(),
+                        e.getWeight()
+                ))
+                .toList();
+
+        evidenceCardRepository.saveAll(evidenceCards);
+    }
+
+    @Transactional
+    public void updateEvidenceCards(WorkCaseEntity workCase, List<EvidenceCardDTO> cards) {
+        if (cards == null || cards.isEmpty()) {
+            return;
+        }
+
+        validateCards(cards);
+
+        if (cards.stream().anyMatch(e -> e.getId() != null && e.getId() < 0)) {
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        }
+
+        List<EvidenceCardDTO> saveList = cards.stream()
+                .filter(e -> e.getId() == null || e.getId() == 0).toList();
+
+        List<EvidenceCardDTO> updateList = cards.stream()
+                .filter(e -> e.getId() != null && e.getId() > 0).toList();
+
+        List<Integer> ids = updateList.stream().map(EvidenceCardDTO::getId).distinct().toList();
+        if (ids.size() != updateList.size()) {
+            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
+        }
+
+        Map<Integer, EvidenceCardEntity> cardMap = evidenceCardRepository
+                .findByIdInAndWorkCaseId(ids, workCase.getId()).stream()
+                .collect(Collectors.toMap(EvidenceCardEntity::getId, Function.identity()));
+
+        if (cardMap.size() != ids.size()) {
+            throw new BusinessException(ErrorCode.EVIDENCE_CARD_NOT_FOUND);
+        }
+
+        for (EvidenceCardDTO card : updateList) {
+            cardMap.get(card.getId()).update(card.getTitle(), card.getBody(), card.getWeight());
+        }
+
+        List<EvidenceCardEntity> evidenceCards = saveList
+                .stream()
+                .map(e -> new EvidenceCardEntity(
+                        workCase,
                         e.getSide(),
                         e.getTitle(),
                         e.getBody(),
@@ -58,18 +114,11 @@ public class EvidenceCardService {
             throw new BusinessException(ErrorCode.CASE_CARD_COUNT_INSUFFICIENT);
         }
 
-        int prosecutionCount = 0;
-        int defenseCount = 0;
-
         for (EvidenceCardDTO card : cards) {
             String side = card.getSide();
 
             // side: PROSECUTION / DEFENSE만 허용
-            if ("PROSECUTION".equals(side)) {
-                prosecutionCount++;
-            } else if ("DEFENSE".equals(side)) {
-                defenseCount++;
-            } else {
+            if (!"PROSECUTION".equals(side) && !"DEFENSE".equals(side)) {
                 throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
             }
 
@@ -84,57 +133,7 @@ public class EvidenceCardService {
             }
 
             // weight: 1~20
-            if (card.getWeight() < 1 || card.getWeight() > 20) {
-                throw new BusinessException(ErrorCode.CARD_WEIGHT_INVALID);
-            }
-        }
-
-        // 진영별 3장 이상
-        if (prosecutionCount < 3 || defenseCount < 3) {
-            throw new BusinessException(ErrorCode.CASE_CARD_COUNT_INSUFFICIENT);
-        }
-    }
-
-    @Transactional
-    public void updateEvidenceCards(int caseId, List<EvidenceCardUpdateDTO> cards) {
-        validateUpdateCards(cards);
-
-        List<Integer> ids = cards.stream().map(EvidenceCardUpdateDTO::getId).distinct().toList();
-        if (ids.size() != cards.size()) {
-            throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
-        }
-
-        Map<Integer, EvidenceCardEntity> cardMap = evidenceCardRepository
-                .findByIdInAndWorkCaseId(ids, caseId).stream()
-                .collect(Collectors.toMap(EvidenceCardEntity::getId, Function.identity()));
-
-        if (cardMap.size() != ids.size()) {
-            throw new BusinessException(ErrorCode.EVIDENCE_CARD_NOT_FOUND);
-        }
-
-        for (EvidenceCardUpdateDTO card : cards) {
-            cardMap.get(card.getId()).update(card.getTitle(), card.getBody(), card.getWeight());
-        }
-    }
-
-    private void validateUpdateCards(List<EvidenceCardUpdateDTO> cards) {
-        if (cards == null || cards.isEmpty()) {
-            return;
-        }
-        for (EvidenceCardUpdateDTO card : cards) {
-            if (card.getId() == null || card.getId() < 1) {
-                throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
-            }
-            String title = card.getTitle();
-            if (title != null && (title.isBlank() || title.length() > 20)) {
-                throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
-            }
-            String body = card.getBody();
-            if (body != null && (body.isBlank() || body.length() > 70)) {
-                throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
-            }
-            Integer weight = card.getWeight();
-            if (weight != null && (weight < 1 || weight > 20)) {
+            if (card.getWeight() == null ||card.getWeight() < 1 || card.getWeight() > 20) {
                 throw new BusinessException(ErrorCode.CARD_WEIGHT_INVALID);
             }
         }

@@ -1,15 +1,15 @@
 package com.verdict.castcourt.domain.evidencecard.dto;
 
 public class EvidenceCardDTO {
-    private int id;
+    private Integer id;
     private String side;
     private String title;
     private String body;
-    private int weight;
+    private Integer weight;
 
     public EvidenceCardDTO() {}
 
-    public EvidenceCardDTO(int id, String side, String title, String body, int weight) {
+    public EvidenceCardDTO(Integer id, String side, String title, String body, Integer weight) {
         this.id = id;
         this.side = side;
         this.title = title;
@@ -17,7 +17,7 @@ public class EvidenceCardDTO {
         this.weight = weight;
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
@@ -45,11 +45,11 @@ public class EvidenceCardDTO {
         this.body = body;
     }
 
-    public int getWeight() {
+    public Integer getWeight() {
         return weight;
     }
 
-    public void setWeight(int weight) {
+    public void setWeight(Integer weight) {
         this.weight = weight;
     }
 }
