@@ -215,7 +215,7 @@ public class SpeakingService {
     private TrialSessionSpeaking judgeAndRecord(TrialSession session, String content) {
 
         JudgeResult judged = callAi(() -> judgeAi.judge(session, content).output(), ErrorCode.AI_JUDGE_FAILED);
-        return session.record(content, judged.issue(), judged.evidence(), judged.rebut(), judged.novel(),
+        return session.record(content, judged.issue(), judged.evidence(), judged.rebut(), judged.novel(), judged.roleViolation(),
                 judged.weight());
     }
 

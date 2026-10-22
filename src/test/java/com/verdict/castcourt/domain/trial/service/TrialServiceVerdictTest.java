@@ -156,6 +156,7 @@ class TrialServiceVerdictTest {
         when(workCaseRepository.getReferenceById(7)).thenReturn(workCase);
         when(accountRepository.getReferenceById(4)).thenReturn(user);
         TrialSession session = session(Side.PROSECUTION);
+        session.record("무죄 요청", true, true, null, true, true, 10);
         finish(session);
 
         TrialEntity trial = new TrialVerdictWriter(repository, speakingRepository, workCaseRepository, accountRepository)
@@ -173,6 +174,12 @@ class TrialServiceVerdictTest {
         assertEquals(16, speakings.size());
         assertEquals(IntStream.rangeClosed(1, 16).boxed().toList(), speakings.stream().map(SpeakingEntity::getSeq).toList());
         assertSame(trial, speakings.getFirst().getTrial());
+        assertTrue(speakings.getFirst().isRoleViolation());
+        assertEquals(-3, speakings.getFirst().getDelta());
+        var record = com.verdict.castcourt.domain.trial.dto.response.TrialRecordResponseDTO.of(trial, speakings);
+        assertTrue(record.speakings().getFirst().roleViolation());
+        assertTrue(record.speakings().getFirst().checks().issue());
+        assertEquals(-3, record.speakings().getFirst().delta());
     }
 
     // 생성자 주입 · SpeakingService · SpeakingRepository 는 판결 받기에서 쓰지 않아서 null
@@ -201,7 +208,7 @@ class TrialServiceVerdictTest {
     // 16개 발언을 모두 기록한다 (①~④ 모두 충족 · 가중치 10)
     private static void finish(TrialSession session) {
         while (!session.isFinished()) {
-            session.record("발언", true, true, true, true, 10);
+            session.record("발언", true, true, true, true, false, 10);
         }
     }
 

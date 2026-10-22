@@ -183,7 +183,7 @@ class TrialServiceStartTest {
         String trialId = trialService.startTrial(4, new TrialStartRequestDTO(7, "PROSECUTION", "IRON")).trialId();
         TrialSession session = trialSessionStore.findByTrialId(trialId).orElseThrow();
         for (int i = 0; i < 4; i++) {           // 모두 진술 2 + 카드 1 의 첫 공방 2 → 다음은 seq 5
-            session.record("발언", true, true, i == 0 ? null : true, true, 10);
+            session.record("발언", true, true, i == 0 ? null : true, true, false, 10);
         }
 
         TrialStatusResponseDTO status = trialService.getTrialStatus(4, trialId);
@@ -202,7 +202,7 @@ class TrialServiceStartTest {
     private static JudgeAi allYesJudge() {
         JudgeAi judgeAi = mock(JudgeAi.class);
         when(judgeAi.judge(any(), any())).thenAnswer(call ->
-                new AiResult<>(JudgeResult.of(call.getArgument(0), true, true, true, true, 10), USAGE));
+                new AiResult<>(JudgeResult.of(call.getArgument(0), true, true, true, true, false, 10), USAGE));
         return judgeAi;
     }
 

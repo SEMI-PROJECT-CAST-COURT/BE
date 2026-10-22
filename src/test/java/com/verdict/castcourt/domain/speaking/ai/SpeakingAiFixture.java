@@ -35,13 +35,13 @@ final class SpeakingAiFixture {
 
     /* 판정 결과를 그대로 기록해 다음 차례로 넘긴다 */
     static void record(TrialSession session, JudgeResult result) {
-        session.record("발언", result.issue(), result.evidence(), result.rebut(), result.novel(), result.weight());
+        session.record("발언", result.issue(), result.evidence(), result.rebut(), result.novel(), result.roleViolation(), result.weight());
     }
 
     /* seq 번째 발언 차례가 될 때까지 아무 발언으로 채운다 */
     static void moveTo(TrialSession session, int seq) {
         while (session.currentTurn().seq() < seq) {
-            record(session, JudgeResult.of(session, true, true, true, true, 10));
+            record(session, JudgeResult.of(session, true, true, true, true, false, 10));
         }
     }
 }

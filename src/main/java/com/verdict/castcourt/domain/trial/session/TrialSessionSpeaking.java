@@ -18,8 +18,9 @@ public record TrialSessionSpeaking(
         boolean evidence,   // ② 근거
         Boolean rebut,      // ③ 반박 (첫 발언이면 null)
         boolean novel,      // ④ 새로움
+        boolean roleViolation, // 별도 역할 이탈 판정
         Grade grade,
-        int delta,          // 게이지 변화량 (검사 +, 변호인 -)
+        int delta,          // 실제 게이지 변화량 (역할 이탈 시 방향 반전)
         int scoreAfter      // 이 발언 뒤 게이지
 ) {
-}
+}

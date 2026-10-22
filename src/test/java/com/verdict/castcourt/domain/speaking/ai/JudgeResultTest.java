@@ -26,7 +26,7 @@ class JudgeResultTest {
         TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
         SpeakingAiFixture.moveTo(session, seq);
 
-        JudgeResult result = JudgeResult.of(session, true, true, false, true, 25);
+        JudgeResult result = JudgeResult.of(session, true, true, false, true, false, 25);
 
         assertEquals(rebut, result.rebut());
         assertEquals(weight, result.weight());

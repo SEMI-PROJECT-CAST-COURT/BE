@@ -1,6 +1,9 @@
 package com.verdict.castcourt.domain.speaking.ai;
 
 import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
+import com.verdict.castcourt.domain.speaking.ai.prompt.SpeakingAiPrompt;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
 import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
 import com.verdict.castcourt.domain.speaking.ai.model.VerdictAi;
@@ -46,7 +49,7 @@ class OpenAiSpeakingAiTest {
     @DisplayName("판사 판정 : 모두 진술이면 직전 상대 발언 '없음' 을 보내고, AI 의 ③ 은 버린다")
     void judgeOpening() {
         TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
-        givenJson("{\"issue\":true,\"evidence\":false,\"rebut\":false,\"novel\":true,\"weight\":12}");
+        givenJson("{\"issue\":true,\"evidence\":false,\"rebut\":false,\"novel\":true,\"roleViolation\":false,\"weight\":12}");
 
         JudgeResult result = new JudgeAi(openAiClient).judge(session, "내 발언").output();
 
@@ -121,6 +124,70 @@ class OpenAiSpeakingAiTest {
         String instructions = com.verdict.castcourt.domain.speaking.ai.prompt.SpeakingAiPrompt.opponentInstructions(Side.DEFENSE);
         assertTrue(instructions.contains("변호인 역할을 맡는다"));
         assertTrue(instructions.contains("아니다"));
+    }
+
+    @Test
+    @DisplayName("판사는 역할·현재 논점을 받고 역할 이탈을 독립 반환하며, 공방은 카드 가중치를 사용한다")
+    void judgeRoleViolation() {
+        TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
+        SpeakingAiFixture.moveTo(session, 4);
+        givenJson("""
+                {"issue":true,"evidence":true,"rebut":true,"novel":true,"roleViolation":true,"weight":20}
+                """);
+
+        JudgeResult result = new JudgeAi(openAiClient).judge(session, "검사의 엄벌 요청을 지지합니다.").output();
+
+        assertTrue(result.roleViolation());
+        assertTrue(result.issue());
+        assertEquals(8, result.weight());
+        ArgumentCaptor<String> input = ArgumentCaptor.forClass(String.class);
+        verify(openAiClient).createJson(anyString(), input.capture(), anyInt(), eq("judge_result"), any());
+        assertTrue(input.getValue().contains("발언자 : 변호인"));
+        assertTrue(input.getValue().contains("상대 : 검사"));
+        assertTrue(input.getValue().contains("[현재 논점]"));
+        assertTrue(input.getValue().contains("현장 존재 여부"));
+        org.junit.jupiter.api.Assertions.assertFalse(input.getValue().contains("행동의 의도"));
+        assertTrue(((java.util.List<?>) SpeakingAiPrompt.JUDGE_SCHEMA.get("required")).contains("roleViolation"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidJudgeResponses")
+    @DisplayName("역할 이탈 누락·null·잘못된 타입을 정상 판정으로 수용하지 않는다")
+    void judgeInvalidTypes(String response) {
+        givenJson(response);
+        BusinessException e = assertThrows(BusinessException.class,
+                () -> new JudgeAi(openAiClient).judge(SpeakingAiFixture.session(Side.DEFENSE), "발언"));
+        assertEquals(ErrorCode.AI_JUDGE_FAILED, e.getErrorCode());
+    }
+
+    static java.util.stream.Stream<String> invalidJudgeResponses() {
+        return java.util.stream.Stream.of(
+                """
+                {"issue":true,"evidence":true,"rebut":true,"novel":true,"weight":10}
+                """,
+                """
+                {"issue":true,"evidence":true,"rebut":true,"novel":true,"roleViolation":null,"weight":10}
+                """,
+                """
+                {"issue":true,"evidence":true,"rebut":true,"novel":true,"roleViolation":"false","weight":10}
+                """,
+                """
+                {"issue":"true","evidence":true,"rebut":true,"novel":true,"roleViolation":false,"weight":10}
+                """,
+                """
+                {"issue":true,"evidence":true,"rebut":true,"novel":true,"roleViolation":false,"weight":"10"}
+                """);
+    }
+
+    @Test
+    @DisplayName("총평에는 서버가 확정한 역할 이탈·실제 벌점을 전달한다")
+    void verdictUsesServerAssessment() {
+        TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
+        session.record("무죄를 요청합니다.", true, true, null, true, true, 10);
+        String input = SpeakingAiPrompt.verdictInput(session);
+        assertTrue(input.contains("[서버 평가 결과]"));
+        assertTrue(input.contains("역할 이탈 true · 등급 STRONG · 실제 게이지 변화 -3"));
+        assertTrue(input.contains("최종 게이지 47"));
     }
 
     private void givenJson(String json) {

@@ -16,6 +16,7 @@ import com.verdict.castcourt.domain.trial.session.TrialSessionSpeaking;
 public record SpeakingJudgeEventDTO(
         Checks checks,
         Grade grade,
+        Boolean roleViolation,
         Integer delta,
         Integer scoreAfter
 ) {
@@ -30,6 +31,7 @@ public record SpeakingJudgeEventDTO(
         return new SpeakingJudgeEventDTO(
                 judgement ? new Checks(speaking.issue(), speaking.evidence(), speaking.rebut(), speaking.novel()) : null,
                 judgement ? speaking.grade() : null,
+                judgement ? speaking.roleViolation() : null,
                 VisibilityRule.showsDelta(mode) ? speaking.delta() : null,
                 VisibilityRule.showsScore(mode) ? speaking.scoreAfter() : null
         );

@@ -7,6 +7,9 @@ import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.session.TrialSessionSpeaking;
 import com.verdict.castcourt.domain.trial.session.TrialTurn;
+import com.verdict.castcourt.domain.trial.session.TrialSession;
+import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
+import java.util.List;
 import com.verdict.castcourt.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,7 +27,7 @@ class SpeakingEventDTOTest {
     // seq 1 검사 모두 진술 : ③ 제외(null) · 보통 · +6 · 게이지 56
     private final TrialSessionSpeaking speaking = new TrialSessionSpeaking(
             1, Stage.OPENING, Side.PROSECUTION, Speaker.USER, "발언",
-            true, false, null, true, Grade.OK, 6, 56);
+            true, false, null, true, false, Grade.OK, 6, 56);
 
     @Test
     @DisplayName("CHICKEN 은 전부, ③ 제외는 \"rebut\":null 로 보인다")
@@ -32,7 +35,7 @@ class SpeakingEventDTOTest {
         String json = jsonMapper.writeValueAsString(SpeakingJudgeEventDTO.of(speaking, TrialMode.CHICKEN));
 
         assertEquals("{\"checks\":{\"issue\":true,\"evidence\":false,\"rebut\":null,\"novel\":true},"
-                + "\"grade\":\"OK\",\"delta\":6,\"scoreAfter\":56}", json);
+                + "\"grade\":\"OK\",\"roleViolation\":false,\"delta\":6,\"scoreAfter\":56}", json);
     }
 
     @Test
@@ -42,6 +45,25 @@ class SpeakingEventDTOTest {
                 jsonMapper.writeValueAsString(SpeakingJudgeEventDTO.of(speaking, TrialMode.CHALLENGER)));
         assertEquals("{}",
                 jsonMapper.writeValueAsString(SpeakingJudgeEventDTO.of(speaking, TrialMode.IRON)));
+    }
+
+    @Test
+    @DisplayName("역할 이탈 여부는 판정 공개 모드에서만 실시간·상태 응답에 노출한다")
+    void violationVisibility() {
+        for (TrialMode mode : TrialMode.values()) {
+            TrialSession session = new TrialSession("role-test", 4, 7, Side.PROSECUTION,
+                    mode, null, List.of(11, 12));
+            TrialSessionSpeaking violation = session.record("역할 이탈", true, true, null, true, true, 10);
+            String event = jsonMapper.writeValueAsString(SpeakingJudgeEventDTO.of(violation, mode));
+            String status = jsonMapper.writeValueAsString(TrialStatusResponseDTO.from(session));
+            if (mode == TrialMode.CHICKEN) {
+                assertTrue(jsonMapper.readTree(event).path("roleViolation").asBoolean());
+                assertTrue(jsonMapper.readTree(status).path("speakings").get(0).path("roleViolation").asBoolean());
+            } else {
+                assertFalse(event.contains("roleViolation"));
+                assertFalse(status.contains("roleViolation"));
+            }
+        }
     }
 
     @Test

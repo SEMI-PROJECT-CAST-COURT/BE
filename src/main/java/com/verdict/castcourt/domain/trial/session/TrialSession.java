@@ -101,7 +101,7 @@ public class TrialSession {
      *  weight : 공방은 카드 가중치, 모두 진술 · 최후 변론은 판사 AI 가 정한 가중치
      * */
     public TrialSessionSpeaking record(String content, boolean issue, boolean evidence, Boolean rebut,
-                                       boolean novel, int weight) {
+                                       boolean novel, boolean roleViolation, int weight) {
 
         TrialTurn turn = currentTurn();
         if (turn == null) {
@@ -109,12 +109,12 @@ public class TrialSession {
         }
 
         Grade grade = Grade.of(issue, evidence, rebut, novel);
-        int delta = ScoreRule.delta(weight, grade, turn.side());
+        int delta = ScoreRule.delta(weight, grade, turn.side(), roleViolation);
         score = ScoreRule.applyDelta(score, delta);
 
         TrialSessionSpeaking speaking = new TrialSessionSpeaking(
                 turn.seq(), turn.stage(), turn.side(), turn.speaker(), content,
-                issue, evidence, rebut, novel, grade, delta, score
+                issue, evidence, rebut, novel, roleViolation, grade, delta, score
         );
         speakings.add(speaking);
 

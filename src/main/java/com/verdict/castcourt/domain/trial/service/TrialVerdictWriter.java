@@ -56,7 +56,7 @@ public class TrialVerdictWriter {
         // 메모리의 발언 기록지 한 줄 = speaking 한 행 (seq 순서 그대로)
         List<SpeakingEntity> speakings = session.getSpeakings().stream()
                 .map(s -> new SpeakingEntity(trial, s.seq(), s.stage(), s.side(), s.speaker(), s.content(),
-                        s.issue(), s.evidence(), s.rebut(), s.novel(), s.grade(), s.delta(), s.scoreAfter()))
+                        s.issue(), s.evidence(), s.rebut(), s.novel(), s.roleViolation(), s.grade(), s.delta(), s.scoreAfter()))
                 .toList();
         speakingRepository.saveAll(speakings);
 
