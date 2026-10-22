@@ -1,6 +1,7 @@
 package com.verdict.castcourt.domain.trial.session;
 
 import com.verdict.castcourt.domain.speaking.entity.Grade;
+import com.verdict.castcourt.domain.speaking.entity.Stage;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
@@ -104,8 +105,25 @@ public class TrialSession {
         if (turn == null || turn.cardId() == null) {
             return null;
         }
-        TrialTopic topic = topics.get(turn.cardId());
-        Integer cardId = side == Side.PROSECUTION ? turn.cardId()
+        return roundCard(turn.cardId(), side);
+    }
+
+    /* 화면에 보여 줄 카드 : 공방은 현재 카드, 모두 진술은 첫 공방 카드, 최후 변론 · 종료 후는 마지막 공방 카드 */
+    public CaseSnapshot.Card shownCard(Side side) {
+        TrialTurn turn = currentTurn();
+        if (turn != null && turn.stage() == Stage.CARD) {
+            return currentCard(side);
+        }
+        List<Integer> usedCardIds = usedCardIds();
+        Integer roundCardId = turn != null && turn.stage() == Stage.OPENING
+                ? usedCardIds.get(0) : usedCardIds.get(usedCardIds.size() - 1);
+        return roundCard(roundCardId, side);
+    }
+
+    /* 공방 검사 카드(roundCardId) 기준으로 해당 진영의 카드를 찾는다 (대응 변호인 카드가 없으면 null) */
+    private CaseSnapshot.Card roundCard(Integer roundCardId, Side side) {
+        TrialTopic topic = topics.get(roundCardId);
+        Integer cardId = side == Side.PROSECUTION ? roundCardId
                 : topic == null ? null : topic.defenseCardId();
         if (cardId == null) {
             return null;

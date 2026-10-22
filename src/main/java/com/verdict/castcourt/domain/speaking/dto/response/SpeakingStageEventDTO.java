@@ -16,7 +16,7 @@ public record SpeakingStageEventDTO(
         Integer cardNo,         // 공방이 아니면 빠진다
         Integer exchangeNo,
         String topic,          // 현재 논점 (모드 공통)
-        TrialCardResponseDTO card // CHICKEN에서 현재 공방 카드 한 장만 공개
+        TrialCardResponseDTO card // CHICKEN에서 단계에 맞는 내 쪽 카드 한 장만 공개
 ) {
 
     /* 다음 차례(turn) 기준 단계 */

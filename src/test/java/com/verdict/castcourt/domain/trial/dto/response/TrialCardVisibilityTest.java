@@ -23,16 +23,16 @@ class TrialCardVisibilityTest {
     @ParameterizedTest
     @CsvSource({"PROSECUTION,CHICKEN", "DEFENSE,CHICKEN", "PROSECUTION,CHALLENGER",
             "DEFENSE,CHALLENGER", "PROSECUTION,IRON", "DEFENSE,IRON"})
-    void currentCardOnlyAcrossAllStages(Side role, TrialMode mode) {
+    void stageCardOnlyAcrossAllStages(Side role, TrialMode mode) {
         TrialSession session = session(role, mode);
         TrialStartResponseDTO start = TrialStartResponseDTO.from(session);
         if (mode == TrialMode.CHICKEN) assertTrue(start.cards().isEmpty());
         else assertNull(start.cards());
-        assertNull(TrialStatusResponseDTO.from(session).card());
-        int[] sequences = {3, 8, 9, 14, 15, 20, 21, 23};
+        // 모두 진술은 첫 공방 카드, 최후 변론 · 종료 후는 마지막 공방 카드(13 : 대응 변호인 카드 없음)
+        int[] sequences = {1, 3, 8, 9, 14, 15, 20, 21, 23};
         Integer[] expected = role == Side.PROSECUTION
-                ? new Integer[]{11, 11, 12, 12, 13, 13, null, null}
-                : new Integer[]{22, 22, 21, 21, null, null, null, null};
+                ? new Integer[]{11, 11, 11, 12, 12, 13, 13, 13, 13}
+                : new Integer[]{22, 22, 22, 21, 21, null, null, null, null};
         for (int index = 0; index < sequences.length; index++) {
             while (!session.isFinished() && session.currentTurn().seq() < sequences[index]) {
                 session.record("발언", false, false, false, false, false, 10);
@@ -42,7 +42,7 @@ class TrialCardVisibilityTest {
             if (mode == TrialMode.CHICKEN && expectedId != null) {
                 assertEquals(expectedId, status.card().cardId());
                 assertEquals(role, status.card().side());
-                assertEquals(status.card(), SpeakingStageEventDTO.of(session).card());
+                if (!session.isFinished()) assertEquals(status.card(), SpeakingStageEventDTO.of(session).card());
                 String json = mapper.writeValueAsString(status);
                 for (CaseSnapshot.Card card : session.getSnapshot().cards()) {
                     if (!card.cardId().equals(expectedId)) assertFalse(json.contains(card.body()));
@@ -86,7 +86,8 @@ class TrialCardVisibilityTest {
             session.record("발언", prosecutor, prosecutor, prosecutor, prosecutor, false, 10);
         }
         assertEquals(List.of(11, 12), session.usedCardIds());
-        assertNull(TrialStatusResponseDTO.from(session).card());
+        // 최후 변론은 실제로 쓴 마지막 카드(12)를 보여 준다
+        assertEquals(12, TrialStatusResponseDTO.from(session).card().cardId());
         assertFalse(mapper.writeValueAsString(TrialStatusResponseDTO.from(session)).contains("원문-13"));
     }
 

@@ -3,6 +3,7 @@ package com.verdict.castcourt.domain.speaking.dto.response;
 import com.verdict.castcourt.domain.speaking.entity.Grade;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.entity.Stage;
+import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.session.TrialSessionSpeaking;
@@ -51,8 +52,12 @@ class SpeakingEventDTOTest {
     @DisplayName("역할 이탈 여부는 판정 공개 모드에서만 실시간·상태 응답에 노출한다")
     void violationVisibility() {
         for (TrialMode mode : TrialMode.values()) {
+            // 겁쟁이 모드는 모두 진술에도 첫 공방 카드를 보여 주므로 카드가 있는 사건이 필요하다
+            CaseSnapshot snapshot = new CaseSnapshot(7, 1, "작품", "쟁점", "피의자", "피해자", "개요", "경과",
+                    List.of(new CaseSnapshot.Card(11, Side.PROSECUTION, "카드11", "원문-11", 8),
+                            new CaseSnapshot.Card(12, Side.PROSECUTION, "카드12", "원문-12", 12)), List.of());
             TrialSession session = new TrialSession("role-test", 4, 7, Side.PROSECUTION,
-                    mode, null, List.of(11, 12));
+                    mode, snapshot, List.of(11, 12));
             TrialSessionSpeaking violation = session.record("역할 이탈", true, true, null, true, true, 10);
             String event = jsonMapper.writeValueAsString(SpeakingJudgeEventDTO.of(violation, mode));
             String status = jsonMapper.writeValueAsString(TrialStatusResponseDTO.from(session));
