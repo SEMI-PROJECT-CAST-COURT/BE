@@ -85,12 +85,12 @@ class TrialServiceStartTest {
     }
 
     @Test
-    @DisplayName("CHICKEN 은 내 쪽 카드만, CHALLENGER 는 사건 경과만 준다")
+    @DisplayName("CHICKEN도 시작 시 카드 원문을 공개하지 않고, CHALLENGER는 사건 경과만 준다")
     void startVisibility() {
         givenCase(7);
 
         TrialStartResponseDTO chicken = trialService.startTrial(4, new TrialStartRequestDTO(7, "DEFENSE", "CHICKEN"));
-        assertEquals(List.of(21, 22, 23), chicken.cards().stream().map(TrialStartResponseDTO.CardResponse::cardId).toList());
+        assertTrue(chicken.cards().isEmpty());
         assertNull(chicken.progress());
 
         TrialStartResponseDTO challenger = trialService.startTrial(4, new TrialStartRequestDTO(7, "DEFENSE", "CHALLENGER"));

@@ -8,7 +8,7 @@ import com.verdict.castcourt.domain.trial.entity.TrialMode;
  *  | 공개 항목          | CHICKEN | CHALLENGER | IRON |
  *  | 게이지 · 변화량     |    O    |     O      |  X   |
  *  | 판정 4항목 · 등급   |    O    |     X      |  X   |
- *  | 내 쪽 근거 카드     |    O    |     X      |  X   |
+ *  | 현재 공방 카드     |    O    |     X      |  X   |
  *  | 사건 경과          |    X    |     O      |  X   |
  * */
 public final class VisibilityRule {
@@ -31,8 +31,8 @@ public final class VisibilityRule {
         return mode == TrialMode.CHICKEN;
     }
 
-    /* 내 쪽 근거 카드 (재판 시작 응답 cards) */
-    public static boolean showsMyCards(TrialMode mode) {
+    /* 현재 공방 카드 원문 (stage · 상태 응답 card) */
+    public static boolean showsCurrentCard(TrialMode mode) {
         return mode == TrialMode.CHICKEN;
     }
 
@@ -40,4 +40,4 @@ public final class VisibilityRule {
     public static boolean showsProgress(TrialMode mode) {
         return mode == TrialMode.CHALLENGER;
     }
-}
+}

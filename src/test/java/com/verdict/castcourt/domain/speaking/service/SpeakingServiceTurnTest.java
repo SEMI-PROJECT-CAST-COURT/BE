@@ -54,6 +54,7 @@ class SpeakingServiceTurnTest {
         assertEquals(Stage.CARD, stage.stage());
         assertEquals(1, stage.cardNo());
         assertEquals("현장 존재 여부", stage.topic());
+        assertEquals(11, stage.card().cardId());
 
         assertEquals(2, session.getSpeakings().size());
         assertEquals(Speaker.AI, session.getSpeakings().get(1).speaker());
@@ -154,6 +155,29 @@ class SpeakingServiceTurnTest {
         SpeakingJudgeEventDTO judge = (SpeakingJudgeEventDTO) recorder.events.getFirst().data();
         assertEquals(true, judge.roleViolation());
         assertEquals(-3, judge.delta());
+    }
+
+    @Test
+    @DisplayName("겁쟁이 모드는 양측 모두 첫 공격 전 현재 카드만 받고 공방 전환 시 한 장씩 교체한다")
+    void chickenCurrentCardBeforeAttack() {
+        for (Side role : Side.values()) {
+            TrialSession session = SpeakingTestFixture.session(role, TrialMode.CHICKEN);
+            if (role == Side.DEFENSE) service.playAiOpening(session);
+            SpeakingTestFixture.Recorder first = new SpeakingTestFixture.Recorder();
+            service.runTurn(session, "모두 진술", first);
+            var firstStage = first.events.stream().filter(e -> e.name().equals("stage"))
+                    .map(e -> (SpeakingStageEventDTO) e.data()).findFirst().orElseThrow();
+            assertEquals(11, firstStage.card().cardId());
+            if (role == Side.DEFENSE) assertEquals("stage", first.events.get(1).name());
+            service.runTurn(session, "첫 공방", new SpeakingTestFixture.Recorder());
+            service.runTurn(session, "두 번째 공방", new SpeakingTestFixture.Recorder());
+            SpeakingTestFixture.Recorder next = new SpeakingTestFixture.Recorder();
+            service.runTurn(session, "세 번째 공방", next);
+            var nextStage = next.events.stream().filter(e -> e.name().equals("stage"))
+                    .map(e -> (SpeakingStageEventDTO) e.data()).findFirst().orElseThrow();
+            assertEquals(12, nextStage.card().cardId());
+            assertEquals(nextStage.card(), TrialStatusResponseDTO.from(session).card());
+        }
     }
 
     @Test

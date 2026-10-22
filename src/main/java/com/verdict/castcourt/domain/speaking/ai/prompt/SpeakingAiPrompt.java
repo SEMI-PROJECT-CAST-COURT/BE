@@ -152,7 +152,7 @@ public final class SpeakingAiPrompt {
                 + "\n피의자 : " + session.getSnapshot().suspect()
                 + "\n피해자 : " + session.getSnapshot().victim()
                 + "\n유저 카드 원문 공개 : "
-                + (session.getMode() == TrialMode.CHICKEN ? "공개" : "비공개")
+                + (session.getMode() == TrialMode.CHICKEN && turn.stage() == Stage.CARD ? "현재 공방 카드만 공개" : "비공개")
                 + "\n\n"
                 + caseText(session.getSnapshot(), turn.side())
                 + (session.currentTopic() == null ? "" : "[현재 논점]\n" + session.currentTopic() + "\n\n")

@@ -15,26 +15,17 @@ import java.util.List;
 public record TrialStartResponseDTO(
         String trialId,
         Stage stage,                    // 첫 단계 (OPENING)
-        List<CardResponse> cards,       // CHICKEN : 내 쪽 근거 카드
+        List<TrialCardResponseDTO> cards, // CHICKEN : 시작은 공방 전이므로 빈 목록 (기존 응답 키 유지)
         String progress,                // CHALLENGER : 사건 경과
         String openingSpeaking          // DEFENSE : AI 검사 모두 진술
 ) {
-
-    /* 근거 카드 한 장 */
-    public record CardResponse(Integer cardId, String title, String body, int weight) {
-    }
 
     public static TrialStartResponseDTO from(TrialSession session) {
 
         TrialMode mode = session.getMode();
         CaseSnapshot snapshot = session.getSnapshot();
 
-        List<CardResponse> cards = VisibilityRule.showsMyCards(mode)
-                ? snapshot.cards().stream()
-                .filter(card -> card.side() == session.getRole())
-                .map(card -> new CardResponse(card.cardId(), card.title(), card.body(), card.weight()))
-                .toList()
-                : null;
+        List<TrialCardResponseDTO> cards = VisibilityRule.showsCurrentCard(mode) ? List.of() : null;
 
         String progress = VisibilityRule.showsProgress(mode) ? snapshot.progress() : null;
 
