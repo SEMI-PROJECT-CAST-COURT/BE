@@ -39,7 +39,6 @@ public record TrialStatusResponseDTO(
             Boolean evidence,
             Boolean rebut,
             Boolean novel,
-            Boolean roleViolation,
             Integer delta,
             Integer scoreAfter
     ) {
@@ -59,7 +58,6 @@ public record TrialStatusResponseDTO(
                     judgement ? speaking.evidence() : null,
                     judgement ? speaking.rebut() : null,
                     judgement ? speaking.novel() : null,
-                    judgement ? speaking.roleViolation() : null,
                     VisibilityRule.showsDelta(mode) ? speaking.delta() : null,
                     VisibilityRule.showsScore(mode) ? speaking.scoreAfter() : null
             );

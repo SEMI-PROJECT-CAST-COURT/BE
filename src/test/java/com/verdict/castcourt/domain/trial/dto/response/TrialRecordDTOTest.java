@@ -68,7 +68,7 @@ class TrialRecordDTOTest {
 
     private SpeakingEntity speaking(int seq, int delta) {
         return new SpeakingEntity(null, seq, Stage.OPENING, Side.PROSECUTION, Speaker.USER, "발언",
-                true, true, null, true, false, Grade.OK, delta, 50);
+                true, true, null, true, Grade.OK, delta, 50);
     }
 
     private TrialEntity trial(int id, Side role) {

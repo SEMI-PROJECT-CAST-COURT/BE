@@ -51,17 +51,18 @@ class OpenAiTopicAiTest {
     }
 
     @ParameterizedTest
-    @MethodSource("invalidResponses")
-    void rejectsIncompleteOrInvalidTopics(String json) {
+    @MethodSource("invalidItems")
+    void replacesOnlyInvalidItemsWithCardTitle(String json) {
         given(json);
-        BusinessException error = assertThrows(BusinessException.class, () -> new OpenAiTopicAi(client).generate(
-                SpeakingAiFixture.session(Side.PROSECUTION).getSnapshot(), List.of(11, 12)));
-        assertEquals(ErrorCode.AI_UPSTREAM_ERROR, error.getErrorCode());
+        var topics = new OpenAiTopicAi(client).generate(SpeakingAiFixture.session(Side.PROSECUTION).getSnapshot(), List.of(11, 12));
+        assertEquals(new TrialTopic("주제", 21), topics.get(11));
+        assertEquals(new TrialTopic("검사 카드 2", null), topics.get(12));
+        verify(client, times(1)).createJson(anyString(), anyString(), anyInt(), anyString(), any());
     }
 
-    static Stream<String> invalidResponses() {
+    static Stream<String> invalidItems() {
         String first = entry(11, "주제", "21");
-        return Stream.of("{}", "{\"topics\":{}}", response(), response(first),
+        return Stream.of(response(first),
                 response(first, entry(11, "중복", "21")),
                 response(first, entry(99, "미요청", "21")),
                 response(first, entry(12, " ", "21")),
@@ -74,6 +75,46 @@ class OpenAiTopicAiTest {
                 response(first, "{\"cardId\":12,\"topic\":\"주제\"}"),
                 response(first, "{\"cardId\":\"12\",\"topic\":\"주제\",\"defenseCardId\":21}"),
                 response(first, "{\"cardId\":12,\"topic\":null,\"defenseCardId\":21}"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("unusableResponses")
+    void retriesOnceThenUsesCardTitles(String json) {
+        given(json);
+        var topics = new OpenAiTopicAi(client).generate(SpeakingAiFixture.session(Side.PROSECUTION).getSnapshot(), List.of(11, 12));
+        assertEquals(Map.of(11, new TrialTopic("검사 카드 1", null), 12, new TrialTopic("검사 카드 2", null)), topics);
+        verify(client, times(2)).createJson(anyString(), anyString(), anyInt(), anyString(), any());
+    }
+
+    static Stream<String> unusableResponses() {
+        return Stream.of("{}", "{\"topics\":{}}");
+    }
+
+    @Test
+    void retriesAfterUpstreamFailure() {
+        when(client.createJson(anyString(), anyString(), anyInt(), anyString(), any()))
+                .thenThrow(new BusinessException(ErrorCode.AI_UPSTREAM_ERROR))
+                .thenReturn(new AiResult<>(JsonMapper.builder().build().readTree(response(entry(11, "현장 존재 여부", "21"))), null));
+        var topics = new OpenAiTopicAi(client).generate(SpeakingAiFixture.session(Side.PROSECUTION).getSnapshot(), List.of(11));
+        assertEquals(new TrialTopic("현장 존재 여부", 21), topics.get(11));
+    }
+
+    @Test
+    void timeoutFallsBackWithoutWaitingAgain() {
+        when(client.createJson(anyString(), anyString(), anyInt(), anyString(), any()))
+                .thenThrow(new BusinessException(ErrorCode.AI_TIMEOUT));
+        var topics = new OpenAiTopicAi(client).generate(SpeakingAiFixture.session(Side.PROSECUTION).getSnapshot(), List.of(11));
+        assertEquals(new TrialTopic("검사 카드 1", null), topics.get(11));
+        verify(client, times(1)).createJson(anyString(), anyString(), anyInt(), anyString(), any());
+    }
+
+    @Test
+    void configurationMissingIsReported() {
+        when(client.createJson(anyString(), anyString(), anyInt(), anyString(), any()))
+                .thenThrow(new BusinessException(ErrorCode.AI_CONFIGURATION_MISSING));
+        BusinessException error = assertThrows(BusinessException.class, () -> new OpenAiTopicAi(client).generate(
+                SpeakingAiFixture.session(Side.PROSECUTION).getSnapshot(), List.of(11)));
+        assertEquals(ErrorCode.AI_CONFIGURATION_MISSING, error.getErrorCode());
     }
 
     private static String entry(int cardId, String topic, String defenseId) {

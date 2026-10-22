@@ -53,7 +53,7 @@ class SpeakingControllerTest {
         // 가짜 AI (판사는 ①~④ 모두 충족, 상대는 두 조각으로 대사를 보낸다)
         JudgeAi judgeAi = mock(JudgeAi.class);
         when(judgeAi.judge(any(), any())).thenAnswer(call ->
-                new AiResult<>(JudgeResult.of(call.getArgument(0), true, true, true, true, false, 10), USAGE));
+                new AiResult<>(JudgeResult.of(call.getArgument(0), true, true, true, true, 10), USAGE));
         OpponentAi opponentAi = mock(OpponentAi.class);
         when(opponentAi.speak(any(), any())).thenAnswer(call -> {
             Consumer<String> onDelta = call.getArgument(1);

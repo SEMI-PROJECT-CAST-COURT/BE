@@ -35,7 +35,7 @@ class TrialCardVisibilityTest {
                 : new Integer[]{22, 22, 22, 21, 21, null, null, null, null};
         for (int index = 0; index < sequences.length; index++) {
             while (!session.isFinished() && session.currentTurn().seq() < sequences[index]) {
-                session.record("발언", false, false, false, false, false, 10);
+                session.record("발언", false, false, false, false, 10);
             }
             TrialStatusResponseDTO status = TrialStatusResponseDTO.from(session);
             Integer expectedId = expected[index];
@@ -62,7 +62,7 @@ class TrialCardVisibilityTest {
     void defenseCardSurvivesCopyAndKeepsTheExistingRoundWeight() {
         TrialSession session = session(Side.DEFENSE, TrialMode.CHICKEN);
         while (session.currentTurn().seq() < 4) {
-            session.record("발언", false, false, false, false, false, 10);
+            session.record("발언", false, false, false, false, 10);
         }
         TrialCardResponseDTO card = TrialCardResponseDTO.current(session);
         assertEquals(22, card.cardId());
@@ -70,10 +70,10 @@ class TrialCardVisibilityTest {
         assertEquals(8, card.roundWeight());
         TrialSession draft = session.copy();
         assertEquals(card, TrialCardResponseDTO.current(draft));
-        JudgeResult judged = JudgeResult.of(draft, true, true, true, true, false, 20);
+        JudgeResult judged = JudgeResult.of(draft, true, true, true, true, 20);
         assertEquals(8, judged.weight());
         assertEquals(-8, draft.record("반론", judged.issue(), judged.evidence(), judged.rebut(), judged.novel(),
-                judged.roleViolation(), judged.weight()).delta());
+                judged.weight()).delta());
         assertEquals(50, session.getScore());
         assertEquals(card, TrialCardResponseDTO.current(session));
     }
@@ -83,7 +83,7 @@ class TrialCardVisibilityTest {
         TrialSession session = session(Side.PROSECUTION, TrialMode.CHICKEN);
         while (session.currentTurn().seq() < 15) {
             boolean prosecutor = session.currentTurn().side() == Side.PROSECUTION;
-            session.record("발언", prosecutor, prosecutor, prosecutor, prosecutor, false, 10);
+            session.record("발언", prosecutor, prosecutor, prosecutor, prosecutor, 10);
         }
         assertEquals(List.of(11, 12), session.usedCardIds());
         // 최후 변론은 실제로 쓴 마지막 카드(12)를 보여 준다

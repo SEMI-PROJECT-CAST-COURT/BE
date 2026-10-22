@@ -11,7 +11,6 @@ public record JudgeResult(
         boolean evidence,   // ② 근거
         Boolean rebut,      // ③ 반박 (판정하지 않는 발언이면 null)
         boolean novel,      // ④ 새로움
-        boolean roleViolation, // 명확한 역할 이탈 (네 항목과 별도)
         int weight          // 게이지에 곱할 가중치 (공방 = 카드 가중치, 그 밖 = AI 가중치)
 ) {
 
@@ -20,7 +19,7 @@ public record JudgeResult(
      *  session 은 아직 이번 발언을 기록하기 전이라 currentTurn() 이 '판정할 발언'의 차례다.
      * */
     public static JudgeResult of(TrialSession session, boolean issue, boolean evidence, boolean rebut,
-                                 boolean novel, boolean roleViolation, int aiWeight) {
+                                 boolean novel, int aiWeight) {
 
         TrialTurn turn = session.currentTurn();
 
@@ -32,7 +31,7 @@ public record JudgeResult(
                 ? JudgeRule.clampWeight(aiWeight)
                 : cardWeight(session.getSnapshot(), turn.cardId());
 
-        return new JudgeResult(issue, evidence, judgedRebut, novel, roleViolation, weight);
+        return new JudgeResult(issue, evidence, judgedRebut, novel, weight);
     }
 
     // 스냅샷의 카드 목록에서 id 로 가중치를 찾는다 (뽑은 카드는 스냅샷에서 나왔으므로 항상 있다)

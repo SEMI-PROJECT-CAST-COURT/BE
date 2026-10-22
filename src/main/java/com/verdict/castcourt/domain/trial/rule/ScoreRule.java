@@ -10,19 +10,12 @@ public final class ScoreRule {
     public static final int MIN_SCORE = 0;      // 0 = 무죄 쪽 끝
     public static final int MAX_SCORE = 100;    // 100 = 유죄 쪽 끝
 
-    private static final int ROLE_VIOLATION_PERCENT = 30;
-
     private ScoreRule() {
     }
 
     /* 변화량 = 가중치 × 등급 배율 (소수점은 반올림) · 검사 발언은 +, 변호인 발언은 − */
-    public static int delta(int weight, Grade grade, Side side, boolean roleViolation) {
+    public static int delta(int weight, Grade grade, Side side) {
 
-        // 역할 이탈이면 등급 득점을 대체한다. 가중치가 작아도 최소 1점 벌점이다.
-        if (roleViolation) {
-            int penalty = Math.max(1, (int) Math.round(weight * ROLE_VIOLATION_PERCENT / 100.0));
-            return side == Side.PROSECUTION ? -penalty : penalty;
-        }
         int amount = (int) Math.round(weight * grade.getPercent() / 100.0);
 
         return side == Side.PROSECUTION ? amount : -amount;
