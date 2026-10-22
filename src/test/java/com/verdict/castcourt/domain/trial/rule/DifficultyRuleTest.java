@@ -46,12 +46,12 @@ class DifficultyRuleTest {
     @DisplayName("난수 구간마다 허점 0 · 1 · 2 · 3개를 고른다")
     void countByRoll() {
         assertTrue(DifficultyRule.pick(rebuttal, rolling(0)).isEmpty());
-        assertTrue(DifficultyRule.pick(rebuttal, rolling(14)).isEmpty());
-        assertEquals(1, DifficultyRule.pick(rebuttal, rolling(15)).size());
-        assertEquals(1, DifficultyRule.pick(rebuttal, rolling(44)).size());
-        assertEquals(2, DifficultyRule.pick(rebuttal, rolling(45)).size());
-        assertEquals(2, DifficultyRule.pick(rebuttal, rolling(84)).size());
-        assertEquals(3, DifficultyRule.pick(rebuttal, rolling(85)).size());
+        assertTrue(DifficultyRule.pick(rebuttal, rolling(4)).isEmpty());
+        assertEquals(1, DifficultyRule.pick(rebuttal, rolling(5)).size());
+        assertEquals(1, DifficultyRule.pick(rebuttal, rolling(24)).size());
+        assertEquals(2, DifficultyRule.pick(rebuttal, rolling(25)).size());
+        assertEquals(2, DifficultyRule.pick(rebuttal, rolling(74)).size());
+        assertEquals(3, DifficultyRule.pick(rebuttal, rolling(75)).size());
         assertEquals(3, DifficultyRule.pick(rebuttal, rolling(99)).size());
     }
 
