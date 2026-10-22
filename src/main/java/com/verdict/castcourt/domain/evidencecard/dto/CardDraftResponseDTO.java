@@ -7,7 +7,7 @@ package com.verdict.castcourt.domain.evidencecard.dto;
 public record CardDraftResponseDTO(
         String side,        // PROSECUTION / DEFENSE (요청한 진영 그대로)
         String title,       // 20자 이내
-        String body,        // 70자 이내
+        String body,        // 100자 이내
         int weight          // 1 ~ 20
 ) {
 }

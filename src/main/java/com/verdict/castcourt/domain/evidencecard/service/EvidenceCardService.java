@@ -127,8 +127,8 @@ public class EvidenceCardService {
                 throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
             }
 
-            // body: 1~70자
-            if (card.getBody() == null || card.getBody().isBlank() || card.getBody().length() > 70) {
+            // body: 1~100자
+            if (card.getBody() == null || card.getBody().isBlank() || card.getBody().length() > 100) {
                 throw new BusinessException(ErrorCode.CASE_INPUT_INVALID);
             }
 
