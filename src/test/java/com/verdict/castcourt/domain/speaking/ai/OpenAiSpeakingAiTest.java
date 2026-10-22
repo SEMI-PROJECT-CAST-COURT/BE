@@ -109,14 +109,14 @@ class OpenAiSpeakingAiTest {
     }
 
     @Test
-    @DisplayName("AI 변호인은 피의자·피해자·상대 역할과 현재 논점만 전달받는다")
+    @DisplayName("AI 변호인은 피고인·피해자·상대 역할과 현재 논점만 전달받는다")
     void defenseIdentityAndTopic() {
         TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
         SpeakingAiFixture.moveTo(session, 4);
         String input = com.verdict.castcourt.domain.speaking.ai.prompt.SpeakingAiPrompt.opponentInput(session);
         assertTrue(input.contains("내 역할 : 변호인"));
         assertTrue(input.contains("상대 역할 : 검사"));
-        assertTrue(input.contains("피의자 : 피의자"));
+        assertTrue(input.contains("피고인 : 피의자"));
         assertTrue(input.contains("피해자 : 피해자"));
         assertTrue(input.contains("[현재 논점]\n현장 존재 여부"));
         org.junit.jupiter.api.Assertions.assertFalse(input.contains("행동의 의도"));
