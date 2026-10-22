@@ -7,6 +7,7 @@ import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
+import com.verdict.castcourt.domain.trial.session.TrialTopic;
 import com.verdict.castcourt.domain.trial.session.TrialSessionStore;
 import com.verdict.castcourt.global.ai.AiResult;
 import com.verdict.castcourt.global.ai.AiUsage;
@@ -39,10 +40,12 @@ final class SpeakingTestFixture {
         CaseSnapshot snapshot = new CaseSnapshot(
                 7, 1, "작품", "쟁점", "피의자", "피해자", "개요", "경과",
                 List.of(new CaseSnapshot.Card(11, Side.PROSECUTION, "카드 1", "내용", 8),
-                        new CaseSnapshot.Card(12, Side.PROSECUTION, "카드 2", "내용", 12)),
+                        new CaseSnapshot.Card(12, Side.PROSECUTION, "카드 2", "내용", 12),
+                        new CaseSnapshot.Card(21, Side.DEFENSE, "변호인 카드 1", "변호 근거 1", 5),
+                        new CaseSnapshot.Card(22, Side.DEFENSE, "변호인 카드 2", "변호 근거 2", 7)),
                 List.of());
         return new TrialSession("trial-1", 4, 7, role, mode, snapshot, List.of(11, 12),
-                java.util.Map.of(11, "현장 존재 여부", 12, "행동의 의도"));
+                java.util.Map.of(11, new TrialTopic("현장 존재 여부", 21), 12, new TrialTopic("행동의 의도", 22)));
     }
 
     /* 보관소에 넣은 재판 */

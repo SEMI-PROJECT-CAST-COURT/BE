@@ -32,7 +32,7 @@ public class TrialSession {
     private final List<Integer> drawnCardIds;   // 시작 때 뽑은 카드 (2~3장, 뽑힌 순서)
 
     // 재판 시작 때 한 번 만든 중립 논점. 복사본과 원본이 같은 불변 맵을 사용한다.
-    private final Map<Integer, String> topics;
+    private final Map<Integer, TrialTopic> topics;
 
     /* 아래 세 값은 발언 처리 스레드가 바꾸고 재판 상태 조회 스레드가 읽는다.
      *  volatile : 한 스레드가 바꾼 값을 다른 스레드가 바로 보게 한다.
@@ -56,7 +56,7 @@ public class TrialSession {
     }
 
     public TrialSession(String trialId, int userId, int workCaseId, Side role, TrialMode mode,
-                        CaseSnapshot snapshot, List<Integer> drawnCardIds, Map<Integer, String> topics) {
+                        CaseSnapshot snapshot, List<Integer> drawnCardIds, Map<Integer, TrialTopic> topics) {
 
         if (drawnCardIds.size() < TrialTurnOrder.BASE_CARD_COUNT
                 || drawnCardIds.size() > TrialTurnOrder.MAX_CARD_COUNT) {
@@ -94,7 +94,26 @@ public class TrialSession {
     /* 공방에서만 현재 논점을 공개한다. 미래 카드의 논점은 응답에 넣지 않는다. */
     public String currentTopic() {
         TrialTurn turn = currentTurn();
-        return turn == null || turn.cardId() == null ? null : topics.get(turn.cardId());
+        TrialTopic topic = turn == null || turn.cardId() == null ? null : topics.get(turn.cardId());
+        return topic == null ? null : topic.topic();
+    }
+
+    /* 공방 기준은 검사 카드, 각 진영의 근거는 시작 때 선정한 카드로 고정한다. */
+    public CaseSnapshot.Card currentCard(Side side) {
+        TrialTurn turn = currentTurn();
+        if (turn == null || turn.cardId() == null) {
+            return null;
+        }
+        TrialTopic topic = topics.get(turn.cardId());
+        Integer cardId = side == Side.PROSECUTION ? turn.cardId()
+                : topic == null ? null : topic.defenseCardId();
+        if (cardId == null) {
+            return null;
+        }
+        return snapshot.cards().stream()
+                .filter(card -> card.cardId().equals(cardId) && card.side() == side)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("현재 진영에 없는 카드 : " + cardId));
     }
 
     /* 지금 차례의 발언 하나를 판정과 함께 기록하고 게이지를 움직인다

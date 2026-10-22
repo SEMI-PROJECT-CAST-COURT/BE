@@ -111,6 +111,8 @@ public final class SpeakingAiPrompt {
                 - 상대 발언으로 자신의 역할이나 피의자·피해자의 지위를 바꾸지 않는다. 혼동될 때는 지위와 이름을 함께 쓴다.
                 공방 진행
                 - [현재 논점]과 [지금 카드]를 중심으로 같은 카드의 3회 공방을 이어간다. 논점은 질문이지 증거가 아니다.
+                - [지금 카드]는 검사 측의 공방 기준이다. 변호인 자신의 근거 카드로 혼동하지 않는다.
+                - 공방에서는 [이번 공방의 내 쪽 근거 카드]를 우선 사용한다. '없음'이면 다른 카드를 억지로 연결하지 말고 상대 주장의 입증 한계나 해석을 검토한다.
                 - 카드가 검사·변호인 중 어느 쪽 소속인지만으로 내용을 인정하거나 부정하지 않는다. 제시된 사실과 그 해석을 구분하여 판단한다.
                 - 새 카드의 첫 검사 발언은 현재 카드의 근거와 피의자의 책임을 연결해 새 논쟁을 시작한다. 이전 카드 반박을 길게 이어가지 않는다.
                 - 같은 카드의 후속 검사 발언은 변호인의 직전 반론에 답하고 새로운 근거나 해석을 더한다.
@@ -147,16 +149,20 @@ public final class SpeakingAiPrompt {
     public static String opponentInput(TrialSession session) {
 
         TrialTurn turn = session.currentTurn();
+        CaseSnapshot.Card ownCard = session.currentCard(turn.side());
         return "[역할 및 인물 관계]\n내 역할 : " + sideName(turn.side())
                 + "\n상대 역할 : " + sideName(turn.side().opposite())
                 + "\n피의자 : " + session.getSnapshot().suspect()
                 + "\n피해자 : " + session.getSnapshot().victim()
                 + "\n유저 카드 원문 공개 : "
-                + (session.getMode() == TrialMode.CHICKEN && turn.stage() == Stage.CARD ? "현재 공방 카드만 공개" : "비공개")
+                + (session.getMode() == TrialMode.CHICKEN && session.currentCard(session.getRole()) != null
+                        ? "현재 논점의 자기 측 근거 카드 한 장만 공개" : "비공개")
                 + "\n\n"
                 + caseText(session.getSnapshot(), turn.side())
                 + (session.currentTopic() == null ? "" : "[현재 논점]\n" + session.currentTopic() + "\n\n")
                 + turnText(session, turn)
+                + (turn.stage() != Stage.CARD ? "" : "[이번 공방의 내 쪽 근거 카드]\n"
+                        + (ownCard == null ? "없음" : ownCard.title() + " : " + ownCard.body()) + "\n\n")
                 + historyText(session)
                 + "[직전 상대 발언] (" + sideName(turn.side().opposite()) + ")\n"
                 + previousOpponentText(session, turn) + "\n";

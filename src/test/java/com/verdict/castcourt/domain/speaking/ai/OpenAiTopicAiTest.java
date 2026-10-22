@@ -2,6 +2,7 @@ package com.verdict.castcourt.domain.speaking.ai;
 
 import com.verdict.castcourt.domain.speaking.ai.model.OpenAiTopicAi;
 import com.verdict.castcourt.domain.trial.entity.Side;
+import com.verdict.castcourt.domain.trial.session.TrialTopic;
 import com.verdict.castcourt.global.ai.AiResult;
 import com.verdict.castcourt.global.ai.OpenAiClient;
 import com.verdict.castcourt.global.exception.BusinessException;
@@ -24,13 +25,29 @@ class OpenAiTopicAiTest {
 
     @Test
     void mapsOnlyRequestedCards() {
-        given("{\"topics\":[{\"cardId\":12,\"topic\":\"행동의 의도\"},{\"cardId\":11,\"topic\":\" 현장 존재 여부 \"}]}");
-        Map<Integer, String> topics = new OpenAiTopicAi(client).generate(
-                SpeakingAiFixture.session(Side.PROSECUTION).getSnapshot(), List.of(11, 12));
-        assertEquals(Map.of(11, "현장 존재 여부", 12, "행동의 의도"), topics);
+        given(response(entry(11, " 현장 존재 여부 ", "21")));
+        Map<Integer, TrialTopic> topics = new OpenAiTopicAi(client).generate(
+                SpeakingAiFixture.session(Side.PROSECUTION).getSnapshot(), List.of(11));
+        assertEquals(Map.of(11, new TrialTopic("현장 존재 여부", 21)), topics);
         verify(client).createJson(anyString(), argThat(input -> input.contains("검사 카드 1")
-                && !input.contains("변호인 카드")), eq(800), eq("trial_topics"), any());
-        assertThrows(UnsupportedOperationException.class, () -> topics.put(99, "다른 논점"));
+                && !input.contains("검사 카드 2") && input.contains("변호인 카드")
+                && input.contains("소속: DEFENSE")), eq(800), eq("trial_topics"), any());
+        assertThrows(UnsupportedOperationException.class, () -> topics.put(99, new TrialTopic("다른 논점", null)));
+    }
+
+    @Test
+    void allowsNoDirectCounterCardWithoutChoosingAnUnrelatedOne() {
+        given(response(entry(11, "현장 존재 여부", "null")));
+        var topics = new OpenAiTopicAi(client).generate(SpeakingAiFixture.session(Side.DEFENSE).getSnapshot(), List.of(11));
+        assertNull(topics.get(11).defenseCardId());
+    }
+
+    @Test
+    void allowsOneDefenseCardToSupportMultipleRelevantTopics() {
+        given(response(entry(12, "행동의 의도", "21"), entry(11, "현장 존재 여부", "21")));
+        var topics = new OpenAiTopicAi(client).generate(SpeakingAiFixture.session(Side.DEFENSE).getSnapshot(), List.of(11, 12));
+        assertEquals(21, topics.get(11).defenseCardId());
+        assertEquals(21, topics.get(12).defenseCardId());
     }
 
     @ParameterizedTest
@@ -43,12 +60,28 @@ class OpenAiTopicAiTest {
     }
 
     static Stream<String> invalidResponses() {
-        return Stream.of("{}", "{\"topics\":[]}",
-                "{\"topics\":[{\"cardId\":11,\"topic\":\"주제\"}]}",
-                "{\"topics\":[{\"cardId\":11,\"topic\":\"주제\"},{\"cardId\":11,\"topic\":\"중복\"}]}",
-                "{\"topics\":[{\"cardId\":11,\"topic\":\"주제\"},{\"cardId\":99,\"topic\":\"미요청\"}]}",
-                "{\"topics\":[{\"cardId\":11,\"topic\":\"주제\"},{\"cardId\":12,\"topic\":\" \"}]}",
-                "{\"topics\":[{\"cardId\":11,\"topic\":\"주제\"},{\"cardId\":12,\"topic\":\"" + "가".repeat(61) + "\"}]}");
+        String first = entry(11, "주제", "21");
+        return Stream.of("{}", "{\"topics\":{}}", response(), response(first),
+                response(first, entry(11, "중복", "21")),
+                response(first, entry(99, "미요청", "21")),
+                response(first, entry(12, " ", "21")),
+                response(first, entry(12, "가".repeat(61), "21")),
+                response(first, entry(12, "주제", "11")),
+                response(first, entry(12, "주제", "99")),
+                response(first, entry(12, "주제", "\"21\"")),
+                response(first, entry(12, "주제", "21.5")),
+                response(first, entry(12, "주제", "true")),
+                response(first, "{\"cardId\":12,\"topic\":\"주제\"}"),
+                response(first, "{\"cardId\":\"12\",\"topic\":\"주제\",\"defenseCardId\":21}"),
+                response(first, "{\"cardId\":12,\"topic\":null,\"defenseCardId\":21}"));
+    }
+
+    private static String entry(int cardId, String topic, String defenseId) {
+        return "{\"cardId\":%d,\"topic\":\"%s\",\"defenseCardId\":%s}".formatted(cardId, topic, defenseId);
+    }
+
+    private static String response(String... entries) {
+        return "{\"topics\":[" + String.join(",", entries) + "]}";
     }
 
     private void given(String json) {

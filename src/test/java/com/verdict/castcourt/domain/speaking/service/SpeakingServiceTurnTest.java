@@ -167,7 +167,8 @@ class SpeakingServiceTurnTest {
             service.runTurn(session, "모두 진술", first);
             var firstStage = first.events.stream().filter(e -> e.name().equals("stage"))
                     .map(e -> (SpeakingStageEventDTO) e.data()).findFirst().orElseThrow();
-            assertEquals(11, firstStage.card().cardId());
+            assertEquals(role == Side.PROSECUTION ? 11 : 21, firstStage.card().cardId());
+            assertEquals(role, firstStage.card().side());
             if (role == Side.DEFENSE) assertEquals("stage", first.events.get(1).name());
             service.runTurn(session, "첫 공방", new SpeakingTestFixture.Recorder());
             service.runTurn(session, "두 번째 공방", new SpeakingTestFixture.Recorder());
@@ -175,7 +176,8 @@ class SpeakingServiceTurnTest {
             service.runTurn(session, "세 번째 공방", next);
             var nextStage = next.events.stream().filter(e -> e.name().equals("stage"))
                     .map(e -> (SpeakingStageEventDTO) e.data()).findFirst().orElseThrow();
-            assertEquals(12, nextStage.card().cardId());
+            assertEquals(role == Side.PROSECUTION ? 12 : 22, nextStage.card().cardId());
+            assertEquals(role, nextStage.card().side());
             assertEquals(nextStage.card(), TrialStatusResponseDTO.from(session).card());
         }
     }

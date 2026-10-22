@@ -16,6 +16,7 @@ import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.repository.TrialCaseReader;
 import com.verdict.castcourt.domain.trial.repository.TrialRepository;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
+import com.verdict.castcourt.domain.trial.session.TrialTopic;
 import com.verdict.castcourt.domain.trial.session.TrialSessionStore;
 import com.verdict.castcourt.global.ai.AiResult;
 import com.verdict.castcourt.global.ai.AiUsage;
@@ -153,7 +154,7 @@ class TrialServiceStartTest {
         org.mockito.Mockito.lenient().when(topicAi.generate(org.mockito.ArgumentMatchers.eq(snapshot),
                 org.mockito.ArgumentMatchers.anyList())).thenAnswer(invocation -> {
                     List<Integer> ids = invocation.getArgument(1);
-                    return ids.stream().collect(java.util.stream.Collectors.toMap(id -> id, id -> "논점 " + id));
+                    return ids.stream().collect(java.util.stream.Collectors.toMap(id -> id, id -> new TrialTopic("논점 " + id, 21)));
                 });
     }
 

@@ -5,6 +5,7 @@ import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
+import com.verdict.castcourt.domain.trial.session.TrialTopic;
 
 import java.util.List;
 
@@ -30,7 +31,7 @@ final class SpeakingAiFixture {
                 )
         );
         return new TrialSession("trial-1", 4, 7, role, TrialMode.CHICKEN, snapshot, List.of(11, 12),
-                java.util.Map.of(11, "현장 존재 여부", 12, "행동의 의도"));
+                java.util.Map.of(11, new TrialTopic("현장 존재 여부", 21), 12, new TrialTopic("행동의 의도", null)));
     }
 
     /* 판정 결과를 그대로 기록해 다음 차례로 넘긴다 */

@@ -121,6 +121,7 @@ class OpenAiSpeakingAiTest {
         assertTrue(input.contains("[현재 논점]\n현장 존재 여부"));
         org.junit.jupiter.api.Assertions.assertFalse(input.contains("행동의 의도"));
         assertTrue(input.contains("[지금 카드] 검사 카드 1"));
+        assertTrue(input.contains("[이번 공방의 내 쪽 근거 카드]\n변호인 카드 : 내용 3"));
         String instructions = com.verdict.castcourt.domain.speaking.ai.prompt.SpeakingAiPrompt.opponentInstructions(Side.DEFENSE);
         assertTrue(instructions.contains("변호인 역할을 맡는다"));
         assertTrue(instructions.contains("아니다"));
@@ -148,6 +149,17 @@ class OpenAiSpeakingAiTest {
         assertTrue(input.getValue().contains("현장 존재 여부"));
         org.junit.jupiter.api.Assertions.assertFalse(input.getValue().contains("행동의 의도"));
         assertTrue(((java.util.List<?>) SpeakingAiPrompt.JUDGE_SCHEMA.get("required")).contains("roleViolation"));
+    }
+
+    @Test
+    @DisplayName("대응 카드가 없는 변호인 공방은 다른 카드를 대신 선정하지 않는다")
+    void defenseWithoutCounterCard() {
+        TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
+        SpeakingAiFixture.moveTo(session, 10);
+        String input = SpeakingAiPrompt.opponentInput(session);
+        assertTrue(input.contains("[현재 논점]\n행동의 의도"));
+        assertTrue(input.contains("[지금 카드] 검사 카드 2"));
+        assertTrue(input.contains("[이번 공방의 내 쪽 근거 카드]\n없음"));
     }
 
     @ParameterizedTest

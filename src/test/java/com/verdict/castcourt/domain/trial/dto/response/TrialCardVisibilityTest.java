@@ -1,10 +1,12 @@
 package com.verdict.castcourt.domain.trial.dto.response;
 
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingStageEventDTO;
+import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
+import com.verdict.castcourt.domain.trial.session.TrialTopic;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -28,20 +30,22 @@ class TrialCardVisibilityTest {
         else assertNull(start.cards());
         assertNull(TrialStatusResponseDTO.from(session).card());
         int[] sequences = {3, 8, 9, 14, 15, 20, 21, 23};
-        Integer[] expected = {11, 11, 12, 12, 13, 13, null, null};
+        Integer[] expected = role == Side.PROSECUTION
+                ? new Integer[]{11, 11, 12, 12, 13, 13, null, null}
+                : new Integer[]{22, 22, 21, 21, null, null, null, null};
         for (int index = 0; index < sequences.length; index++) {
             while (!session.isFinished() && session.currentTurn().seq() < sequences[index]) {
                 session.record("발언", false, false, false, false, false, 10);
             }
             TrialStatusResponseDTO status = TrialStatusResponseDTO.from(session);
-            if (mode == TrialMode.CHICKEN && expected[index] != null) {
-                assertEquals(expected[index], status.card().cardId());
-                assertEquals(Side.PROSECUTION, status.card().side());
+            Integer expectedId = expected[index];
+            if (mode == TrialMode.CHICKEN && expectedId != null) {
+                assertEquals(expectedId, status.card().cardId());
+                assertEquals(role, status.card().side());
                 assertEquals(status.card(), SpeakingStageEventDTO.of(session).card());
                 String json = mapper.writeValueAsString(status);
-                assertFalse(json.contains("변호인 비공개 근거"));
-                for (int id : List.of(11, 12, 13)) {
-                    if (id != expected[index]) assertFalse(json.contains("원문-" + id));
+                for (CaseSnapshot.Card card : session.getSnapshot().cards()) {
+                    if (!card.cardId().equals(expectedId)) assertFalse(json.contains(card.body()));
                 }
             } else {
                 assertNull(status.card());
@@ -52,6 +56,26 @@ class TrialCardVisibilityTest {
                 }
             }
         }
+    }
+
+    @Test
+    void defenseCardSurvivesCopyAndKeepsTheExistingRoundWeight() {
+        TrialSession session = session(Side.DEFENSE, TrialMode.CHICKEN);
+        while (session.currentTurn().seq() < 4) {
+            session.record("발언", false, false, false, false, false, 10);
+        }
+        TrialCardResponseDTO card = TrialCardResponseDTO.current(session);
+        assertEquals(22, card.cardId());
+        assertEquals(7, card.weight());
+        assertEquals(8, card.roundWeight());
+        TrialSession draft = session.copy();
+        assertEquals(card, TrialCardResponseDTO.current(draft));
+        JudgeResult judged = JudgeResult.of(draft, true, true, true, true, false, 20);
+        assertEquals(8, judged.weight());
+        assertEquals(-8, draft.record("반론", judged.issue(), judged.evidence(), judged.rebut(), judged.novel(),
+                judged.roleViolation(), judged.weight()).delta());
+        assertEquals(50, session.getScore());
+        assertEquals(card, TrialCardResponseDTO.current(session));
     }
 
     @Test
@@ -71,8 +95,11 @@ class TrialCardVisibilityTest {
                 List.of(new CaseSnapshot.Card(11, Side.PROSECUTION, "카드11", "원문-11", 8),
                         new CaseSnapshot.Card(12, Side.PROSECUTION, "카드12", "원문-12", 12),
                         new CaseSnapshot.Card(13, Side.PROSECUTION, "카드13", "원문-13", 10),
-                        new CaseSnapshot.Card(21, Side.DEFENSE, "변호인 카드", "변호인 비공개 근거", 5)), List.of());
+                        new CaseSnapshot.Card(21, Side.DEFENSE, "변호인 카드21", "원문-21", 5),
+                        new CaseSnapshot.Card(22, Side.DEFENSE, "변호인 카드22", "원문-22", 7),
+                        new CaseSnapshot.Card(23, Side.DEFENSE, "미선정 변호인 카드", "원문-23", 9)), List.of());
         return new TrialSession("cards", 4, 7, role, mode, snapshot, List.of(11, 12, 13),
-                Map.of(11, "논점11", 12, "논점12", 13, "논점13"));
+                Map.of(11, new TrialTopic("논점11", 22), 12, new TrialTopic("논점12", 21),
+                        13, new TrialTopic("논점13", null)));
     }
 }
