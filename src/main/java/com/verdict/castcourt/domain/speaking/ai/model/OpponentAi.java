@@ -16,8 +16,8 @@ import java.util.function.Consumer;
 @Component
 public class OpponentAi {
 
-    // 한국어 300자 안팎 + 여유
-    private static final int MAX_OUTPUT_TOKENS = 600;
+    // 한국어 100자 안팎 + 여유 (넘치면 문장 중간에 끊기므로 넉넉히 둔다)
+    private static final int MAX_OUTPUT_TOKENS = 300;
 
     private final OpenAiClient openAiClient;
 
