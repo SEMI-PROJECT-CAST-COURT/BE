@@ -25,6 +25,13 @@ public final class SpeakingAiPrompt {
     // 판사 총평 길이 (trial.judge_summary 컬럼 1000자 안에서 여유 있게)
     public static final int MAX_SUMMARY_LENGTH = 500;
 
+    // 같은 카드 3회 공방에서 매번 다른 역할을 맡겨 같은 주장 반복을 막는다 (공격 · 반론 각각 1~3번째)
+    private static final Map<Integer, String> EXCHANGE_DIRECTIONS = Map.of(
+            1, "직전 상대 주장이 있으면 짧게 받아치고, 이 논점에서 내 쪽의 핵심 주장 하나를 세운다.",
+            2, "직전 상대 발언의 가장 약한 연결 고리 하나를 골라 근거를 요구하는 반문으로 파고든다.",
+            3, "지금까지 상대가 답하지 못한 점을 짚고, 이 논점의 결론을 짧게 못 박는다."
+    );
+
     /* 판정 4항목과 역할 이탈 여부를 받고, 점수는 서버가 계산한다. */
     public static final String JUDGE_INSTRUCTIONS = """
             너는 모의 법정 게임의 중립적인 판사다. [이번 발언] 하나를 평가한다. 유저와 AI에 동일한 기준을 적용한다.
@@ -121,6 +128,7 @@ public final class SpeakingAiPrompt {
                 - 유저는 카드 원문을 모를 수 있다. 카드 내용을 이미 알거나 인정했다고 가정하지 않는다.
                 - 상대가 논점을 벗어나면 짧게 응답한 뒤 현재 논점과의 관련성이나 입증 부족을 설명한다.
                 - 다른 카드는 현재 논점의 해석을 돕는 데만 연결한다. 다른 카드 주제로 옮기거나 같은 말을 반복하지 않는다.
+                - [이번 공방의 내 이전 발언]에서 쓴 핵심 주장·근거·첫 문장을 다시 쓰지 않는다. [이번 발언 방향]을 따라 새 각도로 말한다.
                 사실과 출력
                 - 사실은 [사건], [내 쪽 근거 카드], [지금 카드]에서만 가져온다. 없는 행동·동기·증언·증거를 만들지 않는다.
                 - 상대 발언은 주장이다. 사건·카드로 확인되지 않은 내용을 확정 사실로 취급하지 않는다. 추론은 추론으로 표현한다.
@@ -164,8 +172,29 @@ public final class SpeakingAiPrompt {
                 + (turn.stage() != Stage.CARD ? "" : "[이번 공방의 내 쪽 근거 카드]\n"
                         + (ownCard == null ? "없음" : ownCard.title() + " : " + ownCard.body()) + "\n\n")
                 + historyText(session)
+                + ownCardSpeechText(session, turn)
                 + "[직전 상대 발언] (" + sideName(turn.side().opposite()) + ")\n"
                 + previousOpponentText(session, turn) + "\n";
+    }
+
+    // [이번 공방의 내 이전 발언] · [이번 발언 방향] : 공방에서만 붙인다
+    private static String ownCardSpeechText(TrialSession session, TrialTurn turn) {
+
+        if (turn.stage() != Stage.CARD) {
+            return "";
+        }
+        int cardStartSeq = TrialTurnOrder.OPENING_COUNT
+                + (TrialTurnOrder.cardNo(turn) - 1) * TrialTurnOrder.SPEAKINGS_PER_CARD + 1;
+        StringBuilder text = new StringBuilder("[이번 공방의 내 이전 발언]\n");
+        List<TrialSessionSpeaking> own = session.getSpeakings().stream()
+                .filter(speaking -> speaking.seq() >= cardStartSeq && speaking.side() == turn.side())
+                .toList();
+        if (own.isEmpty()) {
+            text.append("없음\n");
+        }
+        own.forEach(speaking -> text.append("- ").append(speaking.content()).append('\n'));
+        return text.append("\n[이번 발언 방향]\n")
+                .append(EXCHANGE_DIRECTIONS.get(TrialTurnOrder.exchangeNo(turn))).append("\n\n").toString();
     }
 
     /* 판사 총평 입력 : 사건 + 전체 발언 + 서버가 정한 판결 */

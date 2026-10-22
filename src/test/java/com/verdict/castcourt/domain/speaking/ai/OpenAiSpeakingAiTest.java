@@ -162,6 +162,23 @@ class OpenAiSpeakingAiTest {
         assertTrue(input.contains("[이번 공방의 내 쪽 근거 카드]\n없음"));
     }
 
+    @Test
+    @DisplayName("상대 AI 는 같은 공방의 자기 이전 발언과 공방 번호별 발언 방향을 받는다")
+    void opponentAvoidsRepeatingInSameCard() {
+        TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);   // AI 가 변호인
+        SpeakingAiFixture.moveTo(session, 4);
+        String first = SpeakingAiPrompt.opponentInput(session);
+        assertTrue(first.contains("[이번 공방의 내 이전 발언]\n없음"));
+        assertTrue(first.contains("내 쪽의 핵심 주장 하나를 세운다"));
+
+        SpeakingAiFixture.moveTo(session, 6);
+        String second = SpeakingAiPrompt.opponentInput(session);
+        assertTrue(second.contains("[이번 공방의 내 이전 발언]\n- "));
+        assertTrue(second.contains("근거를 요구하는 반문"));
+        org.junit.jupiter.api.Assertions.assertFalse(SpeakingAiPrompt.opponentInput(
+                SpeakingAiFixture.session(Side.DEFENSE)).contains("[이번 공방의 내 이전 발언]"));
+    }
+
     @ParameterizedTest
     @MethodSource("invalidJudgeResponses")
     @DisplayName("역할 이탈 누락·null·잘못된 타입을 정상 판정으로 수용하지 않는다")
