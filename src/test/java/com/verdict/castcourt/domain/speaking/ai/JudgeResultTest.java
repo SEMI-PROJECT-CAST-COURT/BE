@@ -6,8 +6,16 @@ import com.verdict.castcourt.domain.trial.session.TrialSession;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import com.verdict.castcourt.domain.trial.rule.DifficultyRule;
+
+import java.util.EnumSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JudgeResultTest {
 
@@ -30,5 +38,22 @@ class JudgeResultTest {
 
         assertEquals(rebut, result.rebut());
         assertEquals(weight, result.weight());
+    }
+
+    @Test
+    @DisplayName("남기게 한 허점은 판사가 충족으로 봤어도 미충족으로 확정하고 ① · 가중치는 그대로 둔다")
+    void weaknessesForceMiss() {
+        JudgeResult all = new JudgeResult(true, true, true, true, 8);
+
+        JudgeResult weak = all.withWeaknesses(EnumSet.allOf(DifficultyRule.Weakness.class));
+        assertTrue(weak.issue());
+        assertFalse(weak.evidence());
+        assertFalse(weak.rebut());
+        assertFalse(weak.novel());
+        assertEquals(8, weak.weight());
+
+        assertEquals(all, all.withWeaknesses(Set.of()));
+        assertNull(new JudgeResult(true, true, null, true, 8)
+                .withWeaknesses(Set.of(DifficultyRule.Weakness.NO_REBUT)).rebut());
     }
 }

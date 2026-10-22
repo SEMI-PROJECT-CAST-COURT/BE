@@ -2,6 +2,7 @@ package com.verdict.castcourt.domain.speaking.service;
 
 import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
 import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
+import com.verdict.castcourt.domain.speaking.ai.dto.OpponentSpeech;
 import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingErrorEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingJudgeEventDTO;
@@ -10,6 +11,7 @@ import com.verdict.castcourt.domain.speaking.dto.response.SpeakingStageEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingTextEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingTurnDoneEventDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
+import com.verdict.castcourt.domain.trial.rule.DifficultyRule;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
 import com.verdict.castcourt.domain.trial.session.TrialSessionSpeaking;
 import com.verdict.castcourt.domain.trial.session.TrialSessionStore;
@@ -26,6 +28,7 @@ import java.time.Instant;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -106,9 +109,9 @@ public class SpeakingService {
      *  재판 시작 응답은 SSE 가 아니라서 글자 조각은 버리고 다 만든 문장만 쓴다.
      * */
     public void playAiOpening(TrialSession session) {
-        String content = speakOpponent(session, delta -> {
+        OpponentSpeech speech = speakOpponent(session, delta -> {
         });
-        judgeAndRecord(session, content);
+        judgeAndRecord(session, speech.text(), speech.weaknesses());
     }
 
     /* SSE 를 열기 전 검사 : 404 → 403 → 내 차례 → 글자 수 */
@@ -182,7 +185,7 @@ public class SpeakingService {
         TrialTurn before = session.currentTurn();
 
         // 1. 내 발언 판정
-        TrialSessionSpeaking mine = judgeAndRecord(session, content);
+        TrialSessionSpeaking mine = judgeAndRecord(session, content, Set.of());
         sender.accept(EVENT_JUDGE, SpeakingJudgeEventDTO.of(mine, session.getMode()));
 
         // 변호인 유저라면 다음 AI 검사 공격에 앞서 새 논점을 안내한다.
@@ -195,11 +198,11 @@ public class SpeakingService {
 
         // 2. AI 상대 발언 (내 발언이 마지막이면 없다) : 글자 조각이 올 때마다 바로 보낸다
         if (!session.isFinished()) {
-            String opponentContent = speakOpponent(session,
+            OpponentSpeech speech = speakOpponent(session,
                     delta -> sender.accept(EVENT_OPPONENT_DELTA, new SpeakingTextEventDTO(delta)));
 
-            // 3. 상대 발언 판정 (사용자와 같은 기준)
-            TrialSessionSpeaking theirs = judgeAndRecord(session, opponentContent);
+            // 3. 상대 발언 판정 (사용자와 같은 기준 + 남기게 한 허점은 미충족으로 확정)
+            TrialSessionSpeaking theirs = judgeAndRecord(session, speech.text(), speech.weaknesses());
             sender.accept(EVENT_OPPONENT_JUDGE, SpeakingJudgeEventDTO.of(theirs, session.getMode()));
         }
 
@@ -211,16 +214,17 @@ public class SpeakingService {
         }
     }
 
-    // 판사 AI 로 판정하고 기록한다
-    private TrialSessionSpeaking judgeAndRecord(TrialSession session, String content) {
+    // 판사 AI 로 판정하고 기록한다 · weaknesses : 상대 AI 에게 남기게 한 허점 (사용자 발언은 비어 있다)
+    private TrialSessionSpeaking judgeAndRecord(TrialSession session, String content, Set<DifficultyRule.Weakness> weaknesses) {
 
-        JudgeResult judged = callAi(() -> judgeAi.judge(session, content).output(), ErrorCode.AI_JUDGE_FAILED);
+        JudgeResult judged = callAi(() -> judgeAi.judge(session, content).output(), ErrorCode.AI_JUDGE_FAILED)
+                .withWeaknesses(weaknesses);
         return session.record(content, judged.issue(), judged.evidence(), judged.rebut(), judged.novel(),
                 judged.weight());
     }
 
     // 상대 AI 발언
-    private String speakOpponent(TrialSession session, Consumer<String> onDelta) {
+    private OpponentSpeech speakOpponent(TrialSession session, Consumer<String> onDelta) {
         return callAi(() -> opponentAi.speak(session, onDelta).output(), ErrorCode.AI_OPPONENT_FAILED);
     }
 

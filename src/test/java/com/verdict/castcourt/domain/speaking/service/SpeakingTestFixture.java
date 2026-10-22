@@ -1,5 +1,8 @@
 package com.verdict.castcourt.domain.speaking.service;
 
+import com.verdict.castcourt.domain.speaking.ai.dto.OpponentSpeech;
+import com.verdict.castcourt.domain.trial.rule.DifficultyRule;
+import java.util.Set;
 import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
 import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
 import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
@@ -62,10 +65,19 @@ final class SpeakingTestFixture {
         return judgeAi;
     }
 
-    /* speak(session, onDelta) 가 불리면 answer 를 실행하는 상대 */
+    /* speak(session, onDelta) 가 불리면 answer 를 실행하는 상대 (허점 없음) */
     static OpponentAi opponent(BiFunction<TrialSession, Consumer<String>, AiResult<String>> answer) {
+        return opponent(answer, Set.of());
+    }
+
+    /* 대사와 함께 정해진 허점을 돌려주는 상대 */
+    static OpponentAi opponent(BiFunction<TrialSession, Consumer<String>, AiResult<String>> answer,
+                               Set<DifficultyRule.Weakness> weaknesses) {
         OpponentAi opponentAi = mock(OpponentAi.class);
-        when(opponentAi.speak(any(), any())).thenAnswer(call -> answer.apply(call.getArgument(0), call.getArgument(1)));
+        when(opponentAi.speak(any(), any())).thenAnswer(call -> {
+            AiResult<String> result = answer.apply(call.getArgument(0), call.getArgument(1));
+            return new AiResult<>(new OpponentSpeech(result.output(), weaknesses), result.usage());
+        });
         return opponentAi;
     }
 

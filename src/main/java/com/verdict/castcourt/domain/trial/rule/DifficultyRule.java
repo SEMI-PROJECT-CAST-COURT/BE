@@ -9,13 +9,14 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-/* 상대 AI 난이도 : 판사 기준은 그대로 두고, 상대 발언에 일부러 허점을 남겨 유저가 반격할 틈을 만든다
- *  허점 1개 → 보통 OK(60%), 2개 이상 → WEAK(30%)
+/* 상대 AI 난이도 : 상대 발언에 일부러 허점을 남겨 유저가 반격할 틈을 만든다
+ *  고른 허점은 판사 결과와 상관없이 해당 항목을 미충족으로 확정한다 (AI 가 지시를 어겨도 반영)
+ *  허점 1개 → 보통 OK(60%), 2개 이상 → WEAK(30%) · 비율 기준 상대 득점 기대치 약 50%
  * */
 public final class DifficultyRule {
 
     // 허점 개수 비율 (%) : 0개 · 1개 · 2개 · 3개 순서, 합 100
-    static final int[] COUNT_PERCENT = {25, 40, 25, 10};
+    static final int[] COUNT_PERCENT = {15, 30, 40, 15};
 
     public enum Weakness {
         NO_EVIDENCE,    // ② 근거 : 사건 · 카드 사실 인용 없이 주장만
