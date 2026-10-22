@@ -20,7 +20,7 @@ public class PosterStorage {
 
     public String save(MultipartFile file) {
         if (file == null || file.isEmpty()) throw invalidInput();
-        if (file.getSize() > 100L * 1024)
+        if (file.getSize() > 500L * 1024)
             throw new BusinessException(ErrorCode.POSTER_TOO_LARGE);
         try {
             byte[] bytes = file.getBytes();

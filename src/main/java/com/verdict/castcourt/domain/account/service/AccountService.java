@@ -95,7 +95,7 @@ public class AccountService {
          return accounts
                     .stream()
                     .filter(a -> !a.getAuthority().equals("USER"))
-                    .map(a -> new AccountDTO(a.getUsername(), a.getNickname(), a.isUsage()))
+                    .map(a -> new AccountDTO(a.getId(), a.getUsername(), a.getNickname(), a.getAuthority(), a.isUsage()))
                     .toList();
     }
 
@@ -105,6 +105,10 @@ public class AccountService {
         AccountEntity account = accountRepository
                                     .findById(id)
                                     .orElseThrow(() -> new BusinessException(ErrorCode.ADMIN_NOT_FOUND));
+
+        if ("SUPER_ADMIN".equals(account.getAuthority())) {
+            throw new BusinessException(ErrorCode.SUPER_ADMIN_DELETE_FORBIDDEN);
+        }
 
         account.setUsage(false);
     }

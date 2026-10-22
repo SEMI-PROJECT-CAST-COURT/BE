@@ -10,7 +10,7 @@ import java.util.Objects;
 public final class CardDraftPrompt {
     // 사건 등록 검사(EvidenceCardService.validateCards)와 같은 값
     public static final int TITLE_MAX_LENGTH = 20;
-    public static final int BODY_MAX_LENGTH = 70;
+    public static final int BODY_MAX_LENGTH = 100;
     public static final int WEIGHT_MIN = 1;
     public static final int WEIGHT_MAX = 20;
     // 수정 제안 문구 길이 (화면의 제안 상자 한 줄)

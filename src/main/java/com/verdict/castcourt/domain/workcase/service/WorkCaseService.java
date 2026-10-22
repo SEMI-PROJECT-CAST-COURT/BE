@@ -53,9 +53,14 @@ public class WorkCaseService {
     @Transactional(readOnly = true)
     public WorkCaseListResponseDTO getWorkCaseList(int workId, int userId) {
 
+        // 작품 존재 여부 확인
+        workRepository.findActiveById(workId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.WORK_NOT_FOUND));
+
         // 작품 id로 사건 목록 조회
         List<WorkCaseEntity> workCases = workCaseRepository.getWorkCasesByWorkId(workId).stream()
                 .filter(WorkCaseEntity::isUsage)      // 삭제된 사건 제외
+                .sorted(Comparator.comparing(WorkCaseEntity::getId).reversed())     // id 내림차순
                 .toList();
 
         // 각 사건들의 근거 카드 목록 조회 - caseId로 grouping하여 Map으로 반환
