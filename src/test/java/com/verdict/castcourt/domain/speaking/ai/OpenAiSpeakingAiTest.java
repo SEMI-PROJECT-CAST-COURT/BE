@@ -179,6 +179,17 @@ class OpenAiSpeakingAiTest {
                 SpeakingAiFixture.session(Side.DEFENSE)).contains("[이번 공방의 내 이전 발언]"));
     }
 
+    @Test
+    @DisplayName("상대 AI 허점은 [이번 발언 제약]으로만 전달하고 허점이 없으면 붙이지 않는다")
+    void opponentWeakness() {
+        TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
+        SpeakingAiFixture.moveTo(session, 4);
+        String weak = SpeakingAiPrompt.opponentInput(session,
+                com.verdict.castcourt.domain.trial.rule.DifficultyRule.Weakness.NO_REBUT);
+        assertTrue(weak.contains("[이번 발언 제약]\n직전 상대 발언의 핵심 주장에 직접 답하지 말고"));
+        org.junit.jupiter.api.Assertions.assertFalse(SpeakingAiPrompt.opponentInput(session).contains("[이번 발언 제약]"));
+    }
+
     @ParameterizedTest
     @MethodSource("invalidJudgeResponses")
     @DisplayName("역할 이탈 누락·null·잘못된 타입을 정상 판정으로 수용하지 않는다")

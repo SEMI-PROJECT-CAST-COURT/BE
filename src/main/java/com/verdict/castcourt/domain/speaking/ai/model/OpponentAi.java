@@ -1,6 +1,7 @@
 package com.verdict.castcourt.domain.speaking.ai.model;
 
 import com.verdict.castcourt.domain.speaking.ai.prompt.SpeakingAiPrompt;
+import com.verdict.castcourt.domain.trial.rule.DifficultyRule;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
 import com.verdict.castcourt.global.ai.AiResult;
 import com.verdict.castcourt.global.ai.OpenAiClient;
@@ -8,6 +9,7 @@ import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
 /* 상대 AI : 사용자의 반대편(검사 또는 변호인)으로 발언한다
@@ -31,9 +33,12 @@ public class OpponentAi {
      * */
     public AiResult<String> speak(TrialSession session, Consumer<String> onDelta) {
 
+        // 난이도 : 일정 비율로 허점 하나를 남기게 한다 (판사 기준은 그대로)
+        DifficultyRule.Weakness weakness = DifficultyRule.pick(session.currentTurn(), ThreadLocalRandom.current().nextInt(100));
+
         AiResult<String> response = openAiClient.streamText(
                 SpeakingAiPrompt.opponentInstructions(session.currentTurn().side()),
-                SpeakingAiPrompt.opponentInput(session),
+                SpeakingAiPrompt.opponentInput(session, weakness),
                 MAX_OUTPUT_TOKENS,
                 onDelta
         );

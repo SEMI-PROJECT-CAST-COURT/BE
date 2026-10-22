@@ -4,6 +4,7 @@ import com.verdict.castcourt.domain.speaking.entity.Stage;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
+import com.verdict.castcourt.domain.trial.rule.DifficultyRule;
 import com.verdict.castcourt.domain.trial.rule.JudgeRule;
 import com.verdict.castcourt.domain.trial.rule.ScoreRule;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
@@ -30,6 +31,12 @@ public final class SpeakingAiPrompt {
             1, "직전 상대 주장이 있으면 짧게 받아치고, 이 논점에서 내 쪽의 핵심 주장 하나를 세운다.",
             2, "직전 상대 발언의 가장 약한 연결 고리 하나를 골라 근거를 요구하는 반문으로 파고든다.",
             3, "지금까지 상대가 답하지 못한 점을 짚고, 이 논점의 결론을 짧게 못 박는다."
+    );
+
+    // 난이도 : 서버가 고른 허점 (DifficultyRule) → [이번 발언 제약]
+    private static final Map<DifficultyRule.Weakness, String> WEAKNESS_TEXT = Map.of(
+            DifficultyRule.Weakness.NO_EVIDENCE, "사건·카드의 구체적인 사실을 인용하지 말고 주장과 해석만으로 말한다.",
+            DifficultyRule.Weakness.NO_REBUT, "직전 상대 발언의 핵심 주장에 직접 답하지 말고 자기 주장만 밀어붙인다."
     );
 
     /* 판정 4항목과 역할 이탈 여부를 받고, 점수는 서버가 계산한다. */
@@ -136,6 +143,7 @@ public final class SpeakingAiPrompt {
                 - 모두 진술은 전체 입장을 요약한다.
                 - 최후 변론에서는 직전 상대 발언의 핵심 주장에 먼저 응답하고, 지금까지의 공방을 종합하여 자신의 최종 입장을 정리한다.
                 - %d자 안팎, 두세 문장으로 쓴다. 같은 뜻을 덧붙여 길게 늘이지 않는다.
+                - [이번 발언 제약]이 있으면 위 규칙보다 우선해 따른다. 제약이 있다는 사실은 발언에 드러내지 않는다.
                 - 발언만 출력한다. 내부 구획명·카드 번호·분석 과정·머리말·따옴표를 붙이지 않는다.
                 말투 (법정 게임 속 냉철한 엘리트 법조인 · 실제 게임 대사는 쓰지 않는다)
                 - 차분하고 자신만만하며 권위 있게 말한다. 유저가 꺾어 보고 싶어지는 강한 맞수처럼 군다.
@@ -160,6 +168,11 @@ public final class SpeakingAiPrompt {
 
     /* 상대 AI 입력 : 자기 쪽 카드와 현재 공방 카드를 제공한다. */
     public static String opponentInput(TrialSession session) {
+        return opponentInput(session, DifficultyRule.Weakness.NONE);
+    }
+
+    /* weakness : 이번 발언에 일부러 남길 허점 (NONE 이면 제약 없음) */
+    public static String opponentInput(TrialSession session, DifficultyRule.Weakness weakness) {
 
         TrialTurn turn = session.currentTurn();
         CaseSnapshot.Card ownCard = session.currentCard(turn.side());
@@ -179,7 +192,8 @@ public final class SpeakingAiPrompt {
                 + historyText(session)
                 + ownCardSpeechText(session, turn)
                 + "[직전 상대 발언] (" + sideName(turn.side().opposite()) + ")\n"
-                + previousOpponentText(session, turn) + "\n";
+                + previousOpponentText(session, turn) + "\n"
+                + (weakness == DifficultyRule.Weakness.NONE ? "" : "\n[이번 발언 제약]\n" + WEAKNESS_TEXT.get(weakness) + "\n");
     }
 
     // [이번 공방의 내 이전 발언] · [이번 발언 방향] : 공방에서만 붙인다
