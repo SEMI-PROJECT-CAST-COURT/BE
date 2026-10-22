@@ -14,6 +14,8 @@ import com.verdict.castcourt.domain.trial.session.TrialTurnOrder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /* 실제 AI 에 보내는 프롬프트 (노션 '프롬프트' B-1 공통 규칙 · B-3 판사 판정)
  *  instructions(역할 · 규칙)는 상수로, input(사건 · 발언)은 재판 상태로 만든다.
@@ -36,7 +38,8 @@ public final class SpeakingAiPrompt {
     // 난이도 : 서버가 고른 허점 (DifficultyRule) → [이번 발언 제약]
     private static final Map<DifficultyRule.Weakness, String> WEAKNESS_TEXT = Map.of(
             DifficultyRule.Weakness.NO_EVIDENCE, "사건·카드의 구체적인 사실을 인용하지 말고 주장과 해석만으로 말한다.",
-            DifficultyRule.Weakness.NO_REBUT, "직전 상대 발언의 핵심 주장에 직접 답하지 말고 자기 주장만 밀어붙인다."
+            DifficultyRule.Weakness.NO_REBUT, "직전 상대 발언의 핵심 주장에 직접 답하지 말고 자기 주장만 밀어붙인다.",
+            DifficultyRule.Weakness.REPEAT, "새 근거나 해석을 더하지 말고 앞에서 나온 자기 주장을 표현만 바꿔 되풀이한다."
     );
 
     /* 판정 4항목과 역할 이탈 여부를 받고, 점수는 서버가 계산한다. */
@@ -171,11 +174,11 @@ public final class SpeakingAiPrompt {
 
     /* 상대 AI 입력 : 자기 쪽 카드와 현재 공방 카드를 제공한다. */
     public static String opponentInput(TrialSession session) {
-        return opponentInput(session, DifficultyRule.Weakness.NONE);
+        return opponentInput(session, Set.of());
     }
 
-    /* weakness : 이번 발언에 일부러 남길 허점 (NONE 이면 제약 없음) */
-    public static String opponentInput(TrialSession session, DifficultyRule.Weakness weakness) {
+    /* weaknesses : 이번 발언에 일부러 남길 허점들 (비어 있으면 제약 없음) */
+    public static String opponentInput(TrialSession session, Set<DifficultyRule.Weakness> weaknesses) {
 
         TrialTurn turn = session.currentTurn();
         CaseSnapshot.Card ownCard = session.currentCard(turn.side());
@@ -196,7 +199,8 @@ public final class SpeakingAiPrompt {
                 + ownCardSpeechText(session, turn)
                 + "[직전 상대 발언] (" + sideName(turn.side().opposite()) + ")\n"
                 + previousOpponentText(session, turn) + "\n"
-                + (weakness == DifficultyRule.Weakness.NONE ? "" : "\n[이번 발언 제약]\n" + WEAKNESS_TEXT.get(weakness) + "\n");
+                + (weaknesses.isEmpty() ? "" : "\n[이번 발언 제약]\n" + weaknesses.stream()
+                        .map(weakness -> "- " + WEAKNESS_TEXT.get(weakness) + "\n").collect(Collectors.joining()));
     }
 
     // [이번 공방의 내 이전 발언] · [이번 발언 방향] : 공방에서만 붙인다

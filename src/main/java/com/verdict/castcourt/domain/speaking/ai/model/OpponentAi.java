@@ -9,6 +9,7 @@ import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -33,12 +34,12 @@ public class OpponentAi {
      * */
     public AiResult<String> speak(TrialSession session, Consumer<String> onDelta) {
 
-        // 난이도 : 일정 비율로 허점 하나를 남기게 한다 (판사 기준은 그대로)
-        DifficultyRule.Weakness weakness = DifficultyRule.pick(session.currentTurn(), ThreadLocalRandom.current().nextInt(100));
+        // 난이도 : 정해진 비율로 허점 0~3개를 남기게 한다 (판사 기준은 그대로)
+        Set<DifficultyRule.Weakness> weaknesses = DifficultyRule.pick(session.currentTurn(), ThreadLocalRandom.current());
 
         AiResult<String> response = openAiClient.streamText(
                 SpeakingAiPrompt.opponentInstructions(session.currentTurn().side()),
-                SpeakingAiPrompt.opponentInput(session, weakness),
+                SpeakingAiPrompt.opponentInput(session, weaknesses),
                 MAX_OUTPUT_TOKENS,
                 onDelta
         );
