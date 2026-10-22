@@ -20,7 +20,7 @@ class VisibilityRuleTest {
         assertEquals(score, VisibilityRule.showsScore(mode));
         assertEquals(delta, VisibilityRule.showsDelta(mode));
         assertEquals(judgement, VisibilityRule.showsJudgement(mode));
-        assertEquals(myCards, VisibilityRule.showsMyCards(mode));
+        assertEquals(myCards, VisibilityRule.showsCurrentCard(mode));
         assertEquals(progress, VisibilityRule.showsProgress(mode));
     }
 }

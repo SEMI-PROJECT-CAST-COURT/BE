@@ -5,6 +5,7 @@ import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
+import com.verdict.castcourt.domain.trial.session.TrialTopic;
 
 import java.util.List;
 
@@ -29,18 +30,19 @@ final class SpeakingAiFixture {
                         new CaseSnapshot.Penalty(5, "유죄 2"), new CaseSnapshot.Penalty(6, "유죄 3")
                 )
         );
-        return new TrialSession("trial-1", 4, 7, role, TrialMode.CHICKEN, snapshot, List.of(11, 12));
+        return new TrialSession("trial-1", 4, 7, role, TrialMode.CHICKEN, snapshot, List.of(11, 12),
+                java.util.Map.of(11, new TrialTopic("현장 존재 여부", 21), 12, new TrialTopic("행동의 의도", null)));
     }
 
     /* 판정 결과를 그대로 기록해 다음 차례로 넘긴다 */
     static void record(TrialSession session, JudgeResult result) {
-        session.record("발언", result.issue(), result.evidence(), result.rebut(), result.novel(), result.weight());
+        session.record("발언", result.issue(), result.evidence(), result.rebut(), result.novel(), result.roleViolation(), result.weight());
     }
 
     /* seq 번째 발언 차례가 될 때까지 아무 발언으로 채운다 */
     static void moveTo(TrialSession session, int seq) {
         while (session.currentTurn().seq() < seq) {
-            record(session, JudgeResult.of(session, true, true, true, true, 10));
+            record(session, JudgeResult.of(session, true, true, true, true, false, 10));
         }
     }
 }

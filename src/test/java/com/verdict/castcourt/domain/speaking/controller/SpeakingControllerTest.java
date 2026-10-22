@@ -27,8 +27,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -46,13 +50,17 @@ class SpeakingControllerTest {
 
     @BeforeEach
     void setUp() {
-        // AI 인터페이스는 메서드가 하나라 람다로 바로 만든다 (판사는 ①~④ 모두 충족, 상대는 두 조각으로 대사를 보낸다)
-        JudgeAi judgeAi = (session, content) -> new AiResult<>(JudgeResult.of(session, true, true, true, true, 10), USAGE);
-        OpponentAi opponentAi = (session, onDelta) -> {
+        // 가짜 AI (판사는 ①~④ 모두 충족, 상대는 두 조각으로 대사를 보낸다)
+        JudgeAi judgeAi = mock(JudgeAi.class);
+        when(judgeAi.judge(any(), any())).thenAnswer(call ->
+                new AiResult<>(JudgeResult.of(call.getArgument(0), true, true, true, true, false, 10), USAGE));
+        OpponentAi opponentAi = mock(OpponentAi.class);
+        when(opponentAi.speak(any(), any())).thenAnswer(call -> {
+            Consumer<String> onDelta = call.getArgument(1);
             onDelta.accept("재판장님, ");
             onDelta.accept("상대 측입니다.");
             return new AiResult<>("재판장님, 상대 측입니다.", USAGE);
-        };
+        });
         SpeakingService service = new SpeakingService(store, judgeAi, opponentAi, Runnable::run);
         // 로그인 사용자 4 (JWT 필터가 하는 일을 대신한다) · @AuthenticationPrincipal 이 이 값을 꺼낸다
         CustomUserDetails user = new CustomUserDetails(4, "user01", null, "USER");

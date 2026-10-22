@@ -176,7 +176,7 @@ public class SpeakingService {
         }
     }
 
-    /* 판정 → (끝나지 않았으면) 상대 발언 → 판정 → 단계가 바뀌었으면 stage */
+    /* 새 공방의 stage는 첫 검사 발언 전에 보낸다. 나머지 판정·기록 순서는 유지한다. */
     private void playTurn(TrialSession session, String content, BiConsumer<String, Object> sender) {
 
         TrialTurn before = session.currentTurn();
@@ -184,6 +184,14 @@ public class SpeakingService {
         // 1. 내 발언 판정
         TrialSessionSpeaking mine = judgeAndRecord(session, content);
         sender.accept(EVENT_JUDGE, SpeakingJudgeEventDTO.of(mine, session.getMode()));
+
+        // 변호인 유저라면 다음 AI 검사 공격에 앞서 새 논점을 안내한다.
+        TrialTurn opponentTurn = session.currentTurn();
+        boolean announced = opponentTurn != null && (opponentTurn.stage() != before.stage()
+                || !Objects.equals(opponentTurn.cardId(), before.cardId()));
+        if (announced) {
+            sender.accept(EVENT_STAGE, SpeakingStageEventDTO.of(session));
+        }
 
         // 2. AI 상대 발언 (내 발언이 마지막이면 없다) : 글자 조각이 올 때마다 바로 보낸다
         if (!session.isFinished()) {
@@ -197,8 +205,9 @@ public class SpeakingService {
 
         // 4. 다음 내 차례의 단계 · 카드가 바뀌었으면 알린다 (다 끝났으면 turn_done 의 VERDICT 로 알린다)
         TrialTurn after = session.currentTurn();
-        if (after != null && (after.stage() != before.stage() || !Objects.equals(after.cardId(), before.cardId()))) {
-            sender.accept(EVENT_STAGE, SpeakingStageEventDTO.of(after));
+        if (!announced && after != null
+                && (after.stage() != before.stage() || !Objects.equals(after.cardId(), before.cardId()))) {
+            sender.accept(EVENT_STAGE, SpeakingStageEventDTO.of(session));
         }
     }
 
@@ -206,7 +215,7 @@ public class SpeakingService {
     private TrialSessionSpeaking judgeAndRecord(TrialSession session, String content) {
 
         JudgeResult judged = callAi(() -> judgeAi.judge(session, content).output(), ErrorCode.AI_JUDGE_FAILED);
-        return session.record(content, judged.issue(), judged.evidence(), judged.rebut(), judged.novel(),
+        return session.record(content, judged.issue(), judged.evidence(), judged.rebut(), judged.novel(), judged.roleViolation(),
                 judged.weight());
     }
 

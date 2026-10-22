@@ -20,6 +20,8 @@ public record TrialStatusResponseDTO(
         Stage stage,                        // 지금 단계 (발언이 끝났으면 CLOSING)
         Integer cardNo,                     // 공방 카드 번호 1~3 (공방이 아니면 null)
         Integer exchangeNo,                 // 카드 안 공방 번호 1~3 (공방이 아니면 null)
+        TrialCardResponseDTO card,           // CHICKEN의 단계별 내 쪽 카드 (그 외 생략)
+        String topic,                       // 현재 공방의 중립 논점
         Integer score,                      // 게이지 (IRON 비공개)
         List<SpeakingResponse> speakings    // 지금까지의 발언
 ) {
@@ -37,6 +39,7 @@ public record TrialStatusResponseDTO(
             Boolean evidence,
             Boolean rebut,
             Boolean novel,
+            Boolean roleViolation,
             Integer delta,
             Integer scoreAfter
     ) {
@@ -56,6 +59,7 @@ public record TrialStatusResponseDTO(
                     judgement ? speaking.evidence() : null,
                     judgement ? speaking.rebut() : null,
                     judgement ? speaking.novel() : null,
+                    judgement ? speaking.roleViolation() : null,
                     VisibilityRule.showsDelta(mode) ? speaking.delta() : null,
                     VisibilityRule.showsScore(mode) ? speaking.scoreAfter() : null
             );
@@ -75,6 +79,8 @@ public record TrialStatusResponseDTO(
                 turn == null ? Stage.CLOSING : turn.stage(),
                 turn == null ? null : TrialTurnOrder.cardNo(turn),
                 turn == null ? null : TrialTurnOrder.exchangeNo(turn),
+                TrialCardResponseDTO.current(session),
+                session.currentTopic(),
                 VisibilityRule.showsScore(mode) ? session.getScore() : null,
                 speakings
         );

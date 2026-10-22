@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -57,13 +58,16 @@ class TrialServiceVerdictTest {
 
     private final TrialSessionStore trialSessionStore = new TrialSessionStore();
 
-    // 판사 총평 AI : 메서드가 하나뿐인 인터페이스라 람다로 만든다 (테스트마다 바꿔 끼운다)
-    private VerdictAi verdictAi = session -> new AiResult<>(SUMMARY, new AiUsage("test-model", 0, 0, LocalDateTime.now(), 0));
+    // 판사 총평 AI : 기본은 SUMMARY 를 돌려준다 (실패 테스트에서 동작을 바꾼다)
+    private final VerdictAi verdictAi = mock(VerdictAi.class);
 
     private TrialService trialService;
 
     @BeforeEach
     void setUp() {
+        // 총평을 부르지 않는 테스트도 있어 lenient (안 쓰인 설정이라고 실패하지 않게)
+        lenient().when(verdictAi.summarize(any()))
+                .thenReturn(new AiResult<>(SUMMARY, new AiUsage("test-model", 0, 0, LocalDateTime.now(), 0)));
         trialService = newService();
     }
 
@@ -120,9 +124,7 @@ class TrialServiceVerdictTest {
     @DisplayName("총평 AI 가 실패하면 저장하지 않고 재판은 메모리에 남는다 (다시 요청 가능)")
     void aiFail() {
         finished(Side.DEFENSE);
-        verdictAi = session -> {
-            throw new BusinessException(ErrorCode.AI_TIMEOUT);
-        };
+        when(verdictAi.summarize(any())).thenThrow(new BusinessException(ErrorCode.AI_TIMEOUT));
         trialService = newService();
 
         assertError(ErrorCode.AI_TIMEOUT, () -> trialService.receiveVerdict(4, "trial-1"));
@@ -154,6 +156,7 @@ class TrialServiceVerdictTest {
         when(workCaseRepository.getReferenceById(7)).thenReturn(workCase);
         when(accountRepository.getReferenceById(4)).thenReturn(user);
         TrialSession session = session(Side.PROSECUTION);
+        session.record("무죄 요청", true, true, null, true, true, 10);
         finish(session);
 
         TrialEntity trial = new TrialVerdictWriter(repository, speakingRepository, workCaseRepository, accountRepository)
@@ -171,11 +174,17 @@ class TrialServiceVerdictTest {
         assertEquals(16, speakings.size());
         assertEquals(IntStream.rangeClosed(1, 16).boxed().toList(), speakings.stream().map(SpeakingEntity::getSeq).toList());
         assertSame(trial, speakings.getFirst().getTrial());
+        assertTrue(speakings.getFirst().isRoleViolation());
+        assertEquals(-3, speakings.getFirst().getDelta());
+        var record = com.verdict.castcourt.domain.trial.dto.response.TrialRecordResponseDTO.of(trial, speakings);
+        assertTrue(record.speakings().getFirst().roleViolation());
+        assertTrue(record.speakings().getFirst().checks().issue());
+        assertEquals(-3, record.speakings().getFirst().delta());
     }
 
     // 생성자 주입 · SpeakingService · SpeakingRepository 는 판결 받기에서 쓰지 않아서 null
     private TrialService newService() {
-        return new TrialService(trialRepository, null, trialSessionStore, null, verdictAi, trialVerdictWriter, null);
+        return new TrialService(trialRepository, null, trialSessionStore, null, verdictAi, trialVerdictWriter, null, null);
     }
 
     // 카드 2장(11 · 12) · 형벌표 6단계 · userId 4 · 사건 7
@@ -199,7 +208,7 @@ class TrialServiceVerdictTest {
     // 16개 발언을 모두 기록한다 (①~④ 모두 충족 · 가중치 10)
     private static void finish(TrialSession session) {
         while (!session.isFinished()) {
-            session.record("발언", true, true, true, true, 10);
+            session.record("발언", true, true, true, true, false, 10);
         }
     }
 

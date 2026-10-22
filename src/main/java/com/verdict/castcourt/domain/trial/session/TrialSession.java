@@ -1,6 +1,7 @@
 package com.verdict.castcourt.domain.trial.session;
 
 import com.verdict.castcourt.domain.speaking.entity.Grade;
+import com.verdict.castcourt.domain.speaking.entity.Stage;
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
@@ -11,6 +12,7 @@ import lombok.Getter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,6 +32,9 @@ public class TrialSession {
     private final CaseSnapshot snapshot;        // 재판 시작 때의 사건 복사본
     private final List<Integer> drawnCardIds;   // 시작 때 뽑은 카드 (2~3장, 뽑힌 순서)
 
+    // 재판 시작 때 한 번 만든 중립 논점. 복사본과 원본이 같은 불변 맵을 사용한다.
+    private final Map<Integer, TrialTopic> topics;
+
     /* 아래 세 값은 발언 처리 스레드가 바꾸고 재판 상태 조회 스레드가 읽는다.
      *  volatile : 한 스레드가 바꾼 값을 다른 스레드가 바로 보게 한다.
      *  speakings 는 final 을 빼고, 반영할 때 목록을 통째로 바꿔 끼운다. (applyFrom)
@@ -48,6 +53,11 @@ public class TrialSession {
 
     public TrialSession(String trialId, int userId, int workCaseId, Side role, TrialMode mode,
                         CaseSnapshot snapshot, List<Integer> drawnCardIds) {
+        this(trialId, userId, workCaseId, role, mode, snapshot, drawnCardIds, Map.of());
+    }
+
+    public TrialSession(String trialId, int userId, int workCaseId, Side role, TrialMode mode,
+                        CaseSnapshot snapshot, List<Integer> drawnCardIds, Map<Integer, TrialTopic> topics) {
 
         if (drawnCardIds.size() < TrialTurnOrder.BASE_CARD_COUNT
                 || drawnCardIds.size() > TrialTurnOrder.MAX_CARD_COUNT) {
@@ -61,6 +71,7 @@ public class TrialSession {
         this.mode = mode;
         this.snapshot = snapshot;
         this.drawnCardIds = List.copyOf(drawnCardIds);
+        this.topics = Map.copyOf(topics);
     }
 
     /* 실제로 공방에 쓰는 카드 (뽑은 카드 앞에서부터 cardCount 장) */
@@ -81,11 +92,53 @@ public class TrialSession {
         return TrialTurnOrder.turnAt(speakings.size() + 1, role, usedCardIds());
     }
 
+    /* 공방에서만 현재 논점을 공개한다. 미래 카드의 논점은 응답에 넣지 않는다. */
+    public String currentTopic() {
+        TrialTurn turn = currentTurn();
+        TrialTopic topic = turn == null || turn.cardId() == null ? null : topics.get(turn.cardId());
+        return topic == null ? null : topic.topic();
+    }
+
+    /* 공방 기준은 검사 카드, 각 진영의 근거는 시작 때 선정한 카드로 고정한다. */
+    public CaseSnapshot.Card currentCard(Side side) {
+        TrialTurn turn = currentTurn();
+        if (turn == null || turn.cardId() == null) {
+            return null;
+        }
+        return roundCard(turn.cardId(), side);
+    }
+
+    /* 화면에 보여 줄 카드 : 공방은 현재 카드, 모두 진술은 첫 공방 카드, 최후 변론 · 종료 후는 마지막 공방 카드 */
+    public CaseSnapshot.Card shownCard(Side side) {
+        TrialTurn turn = currentTurn();
+        if (turn != null && turn.stage() == Stage.CARD) {
+            return currentCard(side);
+        }
+        List<Integer> usedCardIds = usedCardIds();
+        Integer roundCardId = turn != null && turn.stage() == Stage.OPENING
+                ? usedCardIds.get(0) : usedCardIds.get(usedCardIds.size() - 1);
+        return roundCard(roundCardId, side);
+    }
+
+    /* 공방 검사 카드(roundCardId) 기준으로 해당 진영의 카드를 찾는다 (대응 변호인 카드가 없으면 null) */
+    private CaseSnapshot.Card roundCard(Integer roundCardId, Side side) {
+        TrialTopic topic = topics.get(roundCardId);
+        Integer cardId = side == Side.PROSECUTION ? roundCardId
+                : topic == null ? null : topic.defenseCardId();
+        if (cardId == null) {
+            return null;
+        }
+        return snapshot.cards().stream()
+                .filter(card -> card.cardId().equals(cardId) && card.side() == side)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("현재 진영에 없는 카드 : " + cardId));
+    }
+
     /* 지금 차례의 발언 하나를 판정과 함께 기록하고 게이지를 움직인다
      *  weight : 공방은 카드 가중치, 모두 진술 · 최후 변론은 판사 AI 가 정한 가중치
      * */
     public TrialSessionSpeaking record(String content, boolean issue, boolean evidence, Boolean rebut,
-                                       boolean novel, int weight) {
+                                       boolean novel, boolean roleViolation, int weight) {
 
         TrialTurn turn = currentTurn();
         if (turn == null) {
@@ -93,12 +146,12 @@ public class TrialSession {
         }
 
         Grade grade = Grade.of(issue, evidence, rebut, novel);
-        int delta = ScoreRule.delta(weight, grade, turn.side());
+        int delta = ScoreRule.delta(weight, grade, turn.side(), roleViolation);
         score = ScoreRule.applyDelta(score, delta);
 
         TrialSessionSpeaking speaking = new TrialSessionSpeaking(
                 turn.seq(), turn.stage(), turn.side(), turn.speaker(), content,
-                issue, evidence, rebut, novel, grade, delta, score
+                issue, evidence, rebut, novel, roleViolation, grade, delta, score
         );
         speakings.add(speaking);
 
@@ -111,7 +164,7 @@ public class TrialSession {
      * */
     public TrialSession copy() {
 
-        TrialSession draft = new TrialSession(trialId, userId, workCaseId, role, mode, snapshot, drawnCardIds);
+        TrialSession draft = new TrialSession(trialId, userId, workCaseId, role, mode, snapshot, drawnCardIds, topics);
         draft.speakings = new ArrayList<>(speakings);
         draft.cardCount = cardCount;
         draft.score = score;

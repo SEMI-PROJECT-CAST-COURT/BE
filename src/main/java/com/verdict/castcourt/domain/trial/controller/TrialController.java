@@ -47,7 +47,7 @@ public class TrialController {
 
     @Operation(summary = "재판 시작",
             description = "진행 중 재판을 서버 메모리에 만들고 trialId 를 돌려줍니다. 같은 사용자가 다시 시작하면 이전 판은 사라집니다. " +
-                    "cards 는 CHICKEN, progress 는 CHALLENGER 에서만 옵니다.")
+                    "CHICKEN의 cards는 빈 목록이며 단계에 맞는 내 쪽 근거 카드(모두 진술은 첫 공방, 최후 변론은 마지막 공방 카드)는 stage·상태 응답의 card로 전달합니다. progress는 CHALLENGER에서만 옵니다.")
     @PostMapping("/api/trials")
     public ResponseEntity<SingleResponse<TrialStartResponseDTO>> startTrial(
             @AuthenticationPrincipal CustomUserDetails user,

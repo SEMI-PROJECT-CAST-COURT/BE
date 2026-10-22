@@ -17,17 +17,29 @@ class ScoreRuleTest {
     @Test
     @DisplayName("변화량은 가중치 x 배율이고 검사는 +, 변호인은 -")
     void deltaSign() {
-        assertEquals(8, ScoreRule.delta(8, Grade.STRONG, Side.PROSECUTION));
-        assertEquals(-8, ScoreRule.delta(8, Grade.STRONG, Side.DEFENSE));
-        assertEquals(0, ScoreRule.delta(8, Grade.OFF, Side.DEFENSE));
+        assertEquals(8, ScoreRule.delta(8, Grade.STRONG, Side.PROSECUTION, false));
+        assertEquals(-8, ScoreRule.delta(8, Grade.STRONG, Side.DEFENSE, false));
+        assertEquals(0, ScoreRule.delta(8, Grade.OFF, Side.DEFENSE, false));
     }
 
     @Test
     @DisplayName("변화량의 소수점은 반올림한다")
     void deltaRounding() {
-        assertEquals(2, ScoreRule.delta(8, Grade.WEAK, Side.PROSECUTION));   // 2.4 -> 2
-        assertEquals(2, ScoreRule.delta(5, Grade.WEAK, Side.PROSECUTION));   // 1.5 -> 2
-        assertEquals(3, ScoreRule.delta(5, Grade.OK, Side.PROSECUTION));     // 3.0 -> 3
+        assertEquals(2, ScoreRule.delta(8, Grade.WEAK, Side.PROSECUTION, false));   // 2.4 -> 2
+        assertEquals(2, ScoreRule.delta(5, Grade.WEAK, Side.PROSECUTION, false));   // 1.5 -> 2
+        assertEquals(3, ScoreRule.delta(5, Grade.OK, Side.PROSECUTION, false));     // 3.0 -> 3
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1,1", "2,1", "5,2", "8,2", "10,3", "20,6"})
+    @DisplayName("역할 이탈은 등급과 무관하게 30% 반올림·최소 1점, 자기 진영에 불리한 벌점만 적용")
+    void roleViolationPenalty(int weight, int penalty) {
+        for (Grade grade : Grade.values()) {
+            assertEquals(-penalty, ScoreRule.delta(weight, grade, Side.PROSECUTION, true));
+            assertEquals(penalty, ScoreRule.delta(weight, grade, Side.DEFENSE, true));
+        }
+        assertEquals(0, ScoreRule.applyDelta(0, ScoreRule.delta(weight, Grade.STRONG, Side.PROSECUTION, true)));
+        assertEquals(100, ScoreRule.applyDelta(100, ScoreRule.delta(weight, Grade.STRONG, Side.DEFENSE, true)));
     }
 
     @Test

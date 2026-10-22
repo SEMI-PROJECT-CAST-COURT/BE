@@ -68,11 +68,14 @@ public class SpeakingEntity {
     @Column(name = "novel", nullable = false)
     private boolean novel;
 
+    @Column(name = "role_violation", nullable = false)
+    private boolean roleViolation;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "grade", nullable = false, length = 8)
     private Grade grade;
 
-    // 게이지 변화량 (검사 +, 변호인 -)
+    // 실제 게이지 변화량 (역할 이탈 시 방향 반전)
     @Column(name = "delta", nullable = false)
     private int delta;
 
@@ -82,7 +85,7 @@ public class SpeakingEntity {
 
     /* 판결 때 저장할 발언 (id 는 DB 가 정한다) */
     public SpeakingEntity(TrialEntity trial, int seq, Stage stage, Side side, Speaker speaker, String content,
-                          boolean issue, boolean evidence, Boolean rebut, boolean novel,
+                          boolean issue, boolean evidence, Boolean rebut, boolean novel, boolean roleViolation,
                           Grade grade, int delta, int scoreAfter) {
         this.trial = trial;
         this.seq = seq;
@@ -94,8 +97,9 @@ public class SpeakingEntity {
         this.evidence = evidence;
         this.rebut = rebut;
         this.novel = novel;
+        this.roleViolation = roleViolation;
         this.grade = grade;
         this.delta = delta;
         this.scoreAfter = scoreAfter;
     }
-}
+}

@@ -39,7 +39,8 @@ public record TrialRecordResponseDTO(
             String content,
             Checks checks,
             Grade grade,
-            int delta,                  // 게이지 변화량 (검사 +, 변호인 -)
+            boolean roleViolation,
+            int delta,                  // 실제 게이지 변화량 (역할 이탈 시 방향 반전)
             int scoreAfter              // 이 발언 뒤 게이지
     ) {
 
@@ -52,6 +53,7 @@ public record TrialRecordResponseDTO(
                     speaking.getContent(),
                     new Checks(speaking.isIssue(), speaking.isEvidence(), speaking.getRebut(), speaking.isNovel()),
                     speaking.getGrade(),
+                    speaking.isRoleViolation(),
                     speaking.getDelta(),
                     speaking.getScoreAfter()
             );
