@@ -179,6 +179,16 @@ class OpenAiSpeakingAiTest {
     }
 
     @Test
+    @DisplayName("AI 검사는 공방 번호별로 유죄 입증 중심의 발언 방향을 받는다")
+    void prosecutorFocusesOnProof() {
+        TrialSession session = SpeakingAiFixture.session(Side.DEFENSE);      // AI 가 검사
+        SpeakingAiFixture.moveTo(session, 5);
+        assertTrue(SpeakingAiPrompt.opponentInput(session).contains("유죄 입증을 한 단계 더 쌓는다"));
+        assertTrue(SpeakingAiPrompt.opponentInstructions(Side.PROSECUTION).contains("검사는 유죄 입증에 집중한다"));
+        assertTrue(SpeakingAiPrompt.JUDGE_INSTRUCTIONS.contains("검사의 공방 발언은 변호인 반론에 직접 답하지 않아도"));
+    }
+
+    @Test
     @DisplayName("상대 AI 허점은 [이번 발언 제약]으로만 전달하고 허점이 없으면 붙이지 않는다")
     void opponentWeakness() {
         TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
