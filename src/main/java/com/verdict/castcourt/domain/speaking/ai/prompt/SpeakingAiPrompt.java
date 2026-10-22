@@ -36,10 +36,11 @@ public final class SpeakingAiPrompt {
     );
 
     // 난이도 : 서버가 고른 허점 (DifficultyRule) → [이번 발언 제약]
+    //  점수에는 서버가 허점을 확정하므로, 대사는 논리를 유지한 채 강도만 낮춘다
     private static final Map<DifficultyRule.Weakness, String> WEAKNESS_TEXT = Map.of(
-            DifficultyRule.Weakness.NO_EVIDENCE, "사건·카드의 구체적인 사실을 인용하지 말고 주장과 해석만으로 말한다.",
-            DifficultyRule.Weakness.NO_REBUT, "직전 상대 발언의 핵심 주장에 직접 답하지 말고 자기 주장만 밀어붙인다.",
-            DifficultyRule.Weakness.REPEAT, "새 근거나 해석을 더하지 말고 앞에서 나온 자기 주장을 표현만 바꿔 되풀이한다."
+            DifficultyRule.Weakness.NO_EVIDENCE, "사건·카드 사실은 한 가지만 짧게 언급하고, 구체적인 인용보다 해석 중심으로 말한다.",
+            DifficultyRule.Weakness.NO_REBUT, "직전 상대 발언은 한 문장으로만 짧게 받고, 내 주장 전개에 무게를 둔다.",
+            DifficultyRule.Weakness.REPEAT, "새 쟁점을 늘리지 말고 앞에서 세운 핵심 주장을 다른 각도로 다시 강조한다."
     );
 
     /* 판정 4항목을 받고, 점수는 서버가 계산한다. */
@@ -144,7 +145,7 @@ public final class SpeakingAiPrompt {
                 - 모두 진술은 전체 입장을 요약한다.
                 - 최후 변론에서는 직전 상대 발언의 핵심 주장에 먼저 응답하고, 지금까지의 공방을 종합하여 자신의 최종 입장을 정리한다.
                 - %d자 안팎, 두세 문장으로 쓴다. 같은 뜻을 덧붙여 길게 늘이지 않는다.
-                - [이번 발언 제약]이 있으면 위 규칙보다 우선해 따른다. 제약이 있다는 사실은 발언에 드러내지 않는다.
+                - [이번 발언 제약]이 있으면 논리와 법정 말투는 유지한 채 그 방향으로 발언 강도를 조절한다. 제약이 있다는 사실은 발언에 드러내지 않는다.
                 - 발언만 출력한다. 내부 구획명·카드 번호·분석 과정·머리말·따옴표를 붙이지 않는다.
                 말투 (실제 형사 법정의 검사·변호인)
                 - 재판부를 향해 "~습니다", "~입니다" 존댓말로 정중하고 절제되게 말한다. 반말·감탄사·구어체·인터넷 표현은 쓰지 않는다.

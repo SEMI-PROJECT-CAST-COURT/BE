@@ -186,8 +186,8 @@ class OpenAiSpeakingAiTest {
         String weak = SpeakingAiPrompt.opponentInput(session, java.util.EnumSet.of(
                 com.verdict.castcourt.domain.trial.rule.DifficultyRule.Weakness.NO_REBUT,
                 com.verdict.castcourt.domain.trial.rule.DifficultyRule.Weakness.REPEAT));
-        assertTrue(weak.contains("[이번 발언 제약]\n- 직전 상대 발언의 핵심 주장에 직접 답하지 말고"));
-        assertTrue(weak.contains("- 새 근거나 해석을 더하지 말고"));
+        assertTrue(weak.contains("[이번 발언 제약]\n- 직전 상대 발언은 한 문장으로만 짧게 받고"));
+        assertTrue(weak.contains("- 새 쟁점을 늘리지 말고"));
         org.junit.jupiter.api.Assertions.assertFalse(SpeakingAiPrompt.opponentInput(session).contains("[이번 발언 제약]"));
     }
 
