@@ -168,12 +168,12 @@ class OpenAiSpeakingAiTest {
         SpeakingAiFixture.moveTo(session, 4);
         String first = SpeakingAiPrompt.opponentInput(session);
         assertTrue(first.contains("[이번 공방의 내 이전 발언]\n없음"));
-        assertTrue(first.contains("내 쪽의 핵심 주장 하나를 세운다"));
+        assertTrue(first.contains("내 쪽의 핵심 주장 하나를 근거와 함께 세운다"));
 
         SpeakingAiFixture.moveTo(session, 6);
         String second = SpeakingAiPrompt.opponentInput(session);
         assertTrue(second.contains("[이번 공방의 내 이전 발언]\n- "));
-        assertTrue(second.contains("근거를 요구하는 반문"));
+        assertTrue(second.contains("내 쪽 근거로 새 주장을 더한다"));
         org.junit.jupiter.api.Assertions.assertFalse(SpeakingAiPrompt.opponentInput(
                 SpeakingAiFixture.session(Side.DEFENSE)).contains("[이번 공방의 내 이전 발언]"));
     }
@@ -186,8 +186,8 @@ class OpenAiSpeakingAiTest {
         String weak = SpeakingAiPrompt.opponentInput(session, java.util.EnumSet.of(
                 com.verdict.castcourt.domain.trial.rule.DifficultyRule.Weakness.NO_REBUT,
                 com.verdict.castcourt.domain.trial.rule.DifficultyRule.Weakness.REPEAT));
-        assertTrue(weak.contains("[이번 발언 제약]\n- 직전 상대 발언의 핵심 주장에 직접 답하지 말고"));
-        assertTrue(weak.contains("- 새 근거나 해석을 더하지 말고"));
+        assertTrue(weak.contains("[이번 발언 제약]\n- 직전 상대 발언은 한 문장으로만 짧게 받고"));
+        assertTrue(weak.contains("- 새 쟁점을 늘리지 말고"));
         org.junit.jupiter.api.Assertions.assertFalse(SpeakingAiPrompt.opponentInput(session).contains("[이번 발언 제약]"));
     }
 

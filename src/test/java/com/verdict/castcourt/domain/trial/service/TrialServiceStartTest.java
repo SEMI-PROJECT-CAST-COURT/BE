@@ -209,7 +209,8 @@ class TrialServiceStartTest {
 
     private static OpponentAi fixedOpponent() {
         OpponentAi opponentAi = mock(OpponentAi.class);
-        when(opponentAi.speak(any(), any())).thenReturn(new AiResult<>("재판장님, 검사 측 모두 진술입니다.", USAGE));
+        when(opponentAi.speak(any(), any())).thenReturn(new AiResult<>(new com.verdict.castcourt.domain.speaking.ai.dto.OpponentSpeech(
+                "재판장님, 검사 측 모두 진술입니다.", java.util.Set.of()), USAGE));
         return opponentAi;
     }
 }

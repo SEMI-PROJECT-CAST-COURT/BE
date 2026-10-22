@@ -33,6 +33,27 @@ class SpeakingServiceTurnTest {
             store, SpeakingTestFixture.allYesJudge(), SpeakingTestFixture.fixedOpponent());
 
     @Test
+    @DisplayName("상대 AI 허점은 판사가 모두 충족으로 봐도 미충족으로 기록되고, 사용자 발언은 그대로다")
+    void opponentWeaknessesForced() {
+        SpeakingService weakService = SpeakingTestFixture.service(store, SpeakingTestFixture.allYesJudge(),
+                SpeakingTestFixture.opponent((session, onDelta) -> new com.verdict.castcourt.global.ai.AiResult<>(
+                        SpeakingTestFixture.OPPONENT_TEXT, SpeakingTestFixture.USAGE),
+                        java.util.EnumSet.of(com.verdict.castcourt.domain.trial.rule.DifficultyRule.Weakness.NO_EVIDENCE,
+                                com.verdict.castcourt.domain.trial.rule.DifficultyRule.Weakness.REPEAT)));
+        TrialSession session = SpeakingTestFixture.session(Side.PROSECUTION, TrialMode.CHICKEN);
+
+        weakService.runTurn(session, "내 모두 진술", new SpeakingTestFixture.Recorder());
+
+        var mine = session.getSpeakings().get(0);
+        var theirs = session.getSpeakings().get(1);
+        assertEquals(com.verdict.castcourt.domain.speaking.entity.Grade.STRONG, mine.grade());
+        assertEquals(com.verdict.castcourt.domain.speaking.entity.Grade.WEAK, theirs.grade());
+        assertEquals(false, theirs.evidence());
+        assertEquals(false, theirs.novel());
+        assertEquals(true, theirs.issue());
+    }
+
+    @Test
     @DisplayName("검사 첫 턴 : judge → opponent_delta → opponent_judge → stage(공방 시작) → turn_done")
     void firstTurn() {
         TrialSession session = SpeakingTestFixture.session(Side.PROSECUTION, TrialMode.CHICKEN);

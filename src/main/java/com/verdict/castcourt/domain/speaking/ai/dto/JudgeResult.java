@@ -1,9 +1,12 @@
 package com.verdict.castcourt.domain.speaking.ai.dto;
 
 import com.verdict.castcourt.domain.trial.entity.CaseSnapshot;
+import com.verdict.castcourt.domain.trial.rule.DifficultyRule;
 import com.verdict.castcourt.domain.trial.rule.JudgeRule;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
 import com.verdict.castcourt.domain.trial.session.TrialTurn;
+
+import java.util.Set;
 
 /* 판사 판정 결과 : TrialSession.record() 에 그대로 넘기는 값 묶음 */
 public record JudgeResult(
@@ -32,6 +35,19 @@ public record JudgeResult(
                 : cardWeight(session.getSnapshot(), turn.cardId());
 
         return new JudgeResult(issue, evidence, judgedRebut, novel, weight);
+    }
+
+    /* 상대 AI 에게 남기게 한 허점을 판정에 확정한다 (판사가 충족으로 봤어도 미충족)
+     *  ③ 을 판정하지 않는 발언(null)은 그대로 둔다.
+     * */
+    public JudgeResult withWeaknesses(Set<DifficultyRule.Weakness> weaknesses) {
+        return new JudgeResult(
+                issue,
+                evidence && !weaknesses.contains(DifficultyRule.Weakness.NO_EVIDENCE),
+                rebut == null ? null : rebut && !weaknesses.contains(DifficultyRule.Weakness.NO_REBUT),
+                novel && !weaknesses.contains(DifficultyRule.Weakness.REPEAT),
+                weight
+        );
     }
 
     // 스냅샷의 카드 목록에서 id 로 가중치를 찾는다 (뽑은 카드는 스냅샷에서 나왔으므로 항상 있다)

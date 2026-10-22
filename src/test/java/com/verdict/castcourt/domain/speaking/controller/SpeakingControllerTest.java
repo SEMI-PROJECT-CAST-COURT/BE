@@ -59,7 +59,7 @@ class SpeakingControllerTest {
             Consumer<String> onDelta = call.getArgument(1);
             onDelta.accept("재판장님, ");
             onDelta.accept("상대 측입니다.");
-            return new AiResult<>("재판장님, 상대 측입니다.", USAGE);
+            return new AiResult<>(new com.verdict.castcourt.domain.speaking.ai.dto.OpponentSpeech("재판장님, 상대 측입니다.", java.util.Set.of()), USAGE);
         });
         SpeakingService service = new SpeakingService(store, judgeAi, opponentAi, Runnable::run);
         // 로그인 사용자 4 (JWT 필터가 하는 일을 대신한다) · @AuthenticationPrincipal 이 이 값을 꺼낸다
