@@ -5,16 +5,22 @@ import com.verdict.castcourt.domain.speaking.dto.response.SpeakingTextEventDTO;
 import com.verdict.castcourt.domain.speaking.dto.response.SpeakingTurnDoneEventDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.entity.Stage;
+import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.trial.entity.Side;
 import com.verdict.castcourt.domain.trial.entity.TrialMode;
 import com.verdict.castcourt.domain.trial.session.TrialSession;
 import com.verdict.castcourt.domain.trial.session.TrialSessionStore;
+import com.verdict.castcourt.global.exception.BusinessException;
+import com.verdict.castcourt.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /* 한 턴 처리 : 판정 → 상대 발언 → 판정 → 단계 */
 class SpeakingServiceTurnTest {
@@ -44,6 +50,7 @@ class SpeakingServiceTurnTest {
         SpeakingStageEventDTO stage = (SpeakingStageEventDTO) recorder.events.get(recorder.events.size() - 2).data();
         assertEquals(Stage.CARD, stage.stage());
         assertEquals(1, stage.cardNo());
+        assertEquals("현장 존재 여부", stage.topic());
 
         assertEquals(2, session.getSpeakings().size());
         assertEquals(Speaker.AI, session.getSpeakings().get(1).speaker());
@@ -60,6 +67,69 @@ class SpeakingServiceTurnTest {
         service.runTurn(session, "카드 1 첫 공격", recorder);       // seq 3 → 다음 내 차례 seq 5 (같은 카드)
 
         assertEquals(List.of("judge", "opponent_delta", "opponent_judge", "turn_done"), recorder.names());
+    }
+
+    @Test
+    @DisplayName("변호인 유저는 새 카드의 AI 검사 공격 전에 논점을 받는다 (도전자·철인)")
+    void defenseTopicBeforeAttack() {
+        for (TrialMode mode : List.of(TrialMode.CHALLENGER, TrialMode.IRON)) {
+            TrialSession session = SpeakingTestFixture.session(Side.DEFENSE, mode);
+            service.playAiOpening(session);
+            SpeakingTestFixture.Recorder first = new SpeakingTestFixture.Recorder();
+            service.runTurn(session, "변호인 모두 진술", first);
+            assertEquals(List.of("judge", "stage", "opponent_delta", "opponent_judge", "turn_done"), first.names());
+            assertEquals("현장 존재 여부", ((SpeakingStageEventDTO) first.events.get(1).data()).topic());
+            assertEquals("현장 존재 여부", session.currentTopic());
+            service.runTurn(session, "첫 반론", new SpeakingTestFixture.Recorder());
+            service.runTurn(session, "두 번째 반론", new SpeakingTestFixture.Recorder());
+            SpeakingTestFixture.Recorder next = new SpeakingTestFixture.Recorder();
+            service.runTurn(session, "세 번째 반론", next);
+            assertEquals(List.of("judge", "stage", "opponent_delta", "opponent_judge", "turn_done"), next.names());
+            assertEquals("행동의 의도", ((SpeakingStageEventDTO) next.events.get(1).data()).topic());
+        }
+    }
+
+    @Test
+    @DisplayName("검사 유저는 두 모드에서 다음 공격 전에 현재 논점만 받고 상태 조회로 복원한다")
+    void prosecutionTopicVisibility() {
+        for (TrialMode mode : List.of(TrialMode.CHALLENGER, TrialMode.IRON)) {
+            TrialSession session = SpeakingTestFixture.session(Side.PROSECUTION, mode);
+            SpeakingTestFixture.Recorder first = new SpeakingTestFixture.Recorder();
+            service.runTurn(session, "모두 진술", first);
+            assertEquals("현장 존재 여부", session.currentTopic());
+            String json = JsonMapper.builder().build().writeValueAsString(TrialStatusResponseDTO.from(session));
+            assertTrue(json.contains("현장 존재 여부"));
+            assertFalse(json.contains("행동의 의도"));
+            assertFalse(json.contains("카드 1"));
+            service.runTurn(session, "첫 공격", new SpeakingTestFixture.Recorder());
+            service.runTurn(session, "두 번째 공격", new SpeakingTestFixture.Recorder());
+            SpeakingTestFixture.Recorder next = new SpeakingTestFixture.Recorder();
+            service.runTurn(session, "세 번째 공격", next);
+            assertEquals("행동의 의도", session.currentTopic());
+            assertEquals(1, next.events.stream().filter(e -> e.name().equals("stage")).count());
+        }
+    }
+
+    @Test
+    @DisplayName("새 논점 안내 뒤 AI가 실패해도 원본 재판의 논점과 차례는 유지된다")
+    void failedTransitionKeepsOriginalTopic() {
+        TrialSession session = SpeakingTestFixture.session(Side.DEFENSE, TrialMode.IRON);
+        service.playAiOpening(session);
+        service.runTurn(session, "모두 진술", new SpeakingTestFixture.Recorder());
+        service.runTurn(session, "첫 반론", new SpeakingTestFixture.Recorder());
+        service.runTurn(session, "두 번째 반론", new SpeakingTestFixture.Recorder());
+        int seq = session.currentTurn().seq();
+        SpeakingService failing = SpeakingTestFixture.service(store, SpeakingTestFixture.allYesJudge(),
+                (draft, onDelta) -> { throw new BusinessException(ErrorCode.AI_UPSTREAM_ERROR); });
+        SpeakingTestFixture.Recorder recorder = new SpeakingTestFixture.Recorder();
+
+        failing.runTurn(session, "마지막 반론", recorder);
+
+        assertEquals(List.of("judge", "stage", "error"), recorder.names());
+        assertEquals("행동의 의도", ((SpeakingStageEventDTO) recorder.events.get(1).data()).topic());
+        assertEquals(seq, session.currentTurn().seq());
+        assertEquals("현장 존재 여부", session.currentTopic());
+        assertEquals("현장 존재 여부", TrialStatusResponseDTO.from(session).topic());
     }
 
     @Test

@@ -29,7 +29,8 @@ final class SpeakingAiFixture {
                         new CaseSnapshot.Penalty(5, "유죄 2"), new CaseSnapshot.Penalty(6, "유죄 3")
                 )
         );
-        return new TrialSession("trial-1", 4, 7, role, TrialMode.CHICKEN, snapshot, List.of(11, 12));
+        return new TrialSession("trial-1", 4, 7, role, TrialMode.CHICKEN, snapshot, List.of(11, 12),
+                java.util.Map.of(11, "현장 존재 여부", 12, "행동의 의도"));
     }
 
     /* 판정 결과를 그대로 기록해 다음 차례로 넘긴다 */

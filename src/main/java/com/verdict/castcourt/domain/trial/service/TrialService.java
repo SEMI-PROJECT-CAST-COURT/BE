@@ -1,6 +1,7 @@
 package com.verdict.castcourt.domain.trial.service;
 
 import com.verdict.castcourt.domain.speaking.ai.model.VerdictAi;
+import com.verdict.castcourt.domain.speaking.ai.model.OpenAiTopicAi;
 import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.entity.SpeakingEntity;
@@ -49,6 +50,7 @@ public class TrialService {
     private final TrialCaseReader trialCaseReader;
     private final TrialSessionStore trialSessionStore;
     private final SpeakingService speakingService;     // 변호인 시작 때 AI 검사 모두 진술
+    private final OpenAiTopicAi topicAi;
     private final VerdictAi verdictAi;                 // 판사 총평
     private final TrialVerdictWriter trialVerdictWriter;   // 판결 저장 트랜잭션
     private final SpeakingRepository speakingRepository;   // 재판 기록의 발언 읽기
@@ -60,7 +62,8 @@ public class TrialService {
                         SpeakingService speakingService,
                         VerdictAi verdictAi,
                         TrialVerdictWriter trialVerdictWriter,
-                        SpeakingRepository speakingRepository) {
+                        SpeakingRepository speakingRepository,
+                        OpenAiTopicAi topicAi) {
         this.trialRepository = trialRepository;
         this.trialCaseReader = trialCaseReader;
         this.trialSessionStore = trialSessionStore;
@@ -68,6 +71,7 @@ public class TrialService {
         this.verdictAi = verdictAi;
         this.trialVerdictWriter = trialVerdictWriter;
         this.speakingRepository = speakingRepository;
+        this.topicAi = topicAi;
     }
 
     /* 재판 시작 (TRL-01) : 검사 → 스냅샷 · 카드 추첨 → (변호인이면 AI 검사 모두 진술) → 메모리에 저장 (DB 저장 없음)
@@ -90,6 +94,7 @@ public class TrialService {
             throw new BusinessException(ErrorCode.ROLE_ALREADY_RECORDED);
         }
 
+        List<Integer> cardIds = drawCards(snapshot);
         TrialSession session = new TrialSession(
                 UUID.randomUUID().toString(),
                 userId,
@@ -97,7 +102,8 @@ public class TrialService {
                 role,
                 mode,
                 snapshot,
-                drawCards(snapshot)
+                cardIds,
+                topicAi.generate(snapshot, cardIds)
         );
 
         // 변호인이면 첫 차례가 AI 검사다. 저장 전에 만들어서, AI 가 실패하면 판이 생기지 않게 한다 (502 · 503 · 504 JSON 응답)

@@ -41,7 +41,8 @@ final class SpeakingTestFixture {
                 List.of(new CaseSnapshot.Card(11, Side.PROSECUTION, "카드 1", "내용", 8),
                         new CaseSnapshot.Card(12, Side.PROSECUTION, "카드 2", "내용", 12)),
                 List.of());
-        return new TrialSession("trial-1", 4, 7, role, mode, snapshot, List.of(11, 12));
+        return new TrialSession("trial-1", 4, 7, role, mode, snapshot, List.of(11, 12),
+                java.util.Map.of(11, "현장 존재 여부", 12, "행동의 의도"));
     }
 
     /* 보관소에 넣은 재판 */

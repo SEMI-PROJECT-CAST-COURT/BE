@@ -50,9 +50,9 @@ class SpeakingEventDTOTest {
         TrialTurn closing = new TrialTurn(15, Stage.CLOSING, Side.PROSECUTION, Speaker.USER, null);
         TrialTurn card = new TrialTurn(9, Stage.CARD, Side.PROSECUTION, Speaker.USER, 12);
 
-        assertEquals("{\"stage\":\"CLOSING\"}", jsonMapper.writeValueAsString(SpeakingStageEventDTO.of(closing)));
+        assertEquals("{\"stage\":\"CLOSING\"}", jsonMapper.writeValueAsString(new SpeakingStageEventDTO(closing.stage(), null, null, null)));
         assertEquals("{\"stage\":\"CARD\",\"cardNo\":2,\"exchangeNo\":1}",
-                jsonMapper.writeValueAsString(SpeakingStageEventDTO.of(card)));
+                jsonMapper.writeValueAsString(new SpeakingStageEventDTO(card.stage(), 2, 1, null)));
     }
 
     @Test

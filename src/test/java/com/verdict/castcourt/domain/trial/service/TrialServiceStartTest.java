@@ -5,6 +5,7 @@ import com.verdict.castcourt.domain.trial.dto.response.TrialStatusResponseDTO;
 import com.verdict.castcourt.domain.speaking.ai.dto.JudgeResult;
 import com.verdict.castcourt.domain.speaking.ai.model.JudgeAi;
 import com.verdict.castcourt.domain.speaking.ai.model.OpponentAi;
+import com.verdict.castcourt.domain.speaking.ai.model.OpenAiTopicAi;
 import com.verdict.castcourt.domain.speaking.entity.Speaker;
 import com.verdict.castcourt.domain.speaking.service.SpeakingService;
 import com.verdict.castcourt.domain.speaking.entity.Stage;
@@ -45,6 +46,9 @@ import static org.mockito.Mockito.when;
 class TrialServiceStartTest {
 
     @Mock
+    private OpenAiTopicAi topicAi;
+
+    @Mock
     private TrialRepository trialRepository;
 
     @Mock
@@ -73,6 +77,9 @@ class TrialServiceStartTest {
         TrialSession session = trialSessionStore.findByUserId(4).orElseThrow();
         assertEquals(response.trialId(), session.getTrialId());
         assertEquals(Stage.OPENING, response.stage());
+        assertNull(session.currentTopic());
+        assertEquals(3, session.getTopics().size());
+        assertEquals(session.getTopics(), session.copy().getTopics());
         assertEquals(3, session.getDrawnCardIds().size());
         assertTrue(List.of(11, 12, 13, 14).containsAll(session.getDrawnCardIds()));   // 검사 카드만
     }
@@ -122,6 +129,19 @@ class TrialServiceStartTest {
         assertNull(prosecution.openingSpeaking());
     }
 
+    @Test
+    @DisplayName("논점 생성 실패 시 기존 재판을 덮어쓰지 않는다")
+    void topicFailureKeepsPreviousTrial() {
+        givenCase(7);
+        trialService.startTrial(4, new TrialStartRequestDTO(7, "PROSECUTION", "IRON"));
+        TrialSession previous = trialSessionStore.findByUserId(4).orElseThrow();
+        when(topicAi.generate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyList()))
+                .thenThrow(new BusinessException(ErrorCode.AI_UPSTREAM_ERROR));
+        assertError(ErrorCode.AI_UPSTREAM_ERROR,
+                () -> trialService.startTrial(4, new TrialStartRequestDTO(7, "PROSECUTION", "IRON")));
+        org.junit.jupiter.api.Assertions.assertSame(previous, trialSessionStore.findByUserId(4).orElseThrow());
+    }
+
     // 사건 caseId : 검사 카드 11~14, 변호인 카드 21~23
     private void givenCase(int caseId) {
         List<CaseSnapshot.Card> cards = List.of(
@@ -130,6 +150,11 @@ class TrialServiceStartTest {
         );
         CaseSnapshot snapshot = new CaseSnapshot(caseId, 1, "작품", "쟁점", "피의자", "피해자", "개요", "경과", cards, List.of());
         when(trialCaseReader.findSnapshot(caseId)).thenReturn(Optional.of(snapshot));
+        org.mockito.Mockito.lenient().when(topicAi.generate(org.mockito.ArgumentMatchers.eq(snapshot),
+                org.mockito.ArgumentMatchers.anyList())).thenAnswer(invocation -> {
+                    List<Integer> ids = invocation.getArgument(1);
+                    return ids.stream().collect(java.util.stream.Collectors.toMap(id -> id, id -> "논점 " + id));
+                });
     }
 
     private CaseSnapshot.Card card(int cardId, Side side) {
@@ -166,6 +191,7 @@ class TrialServiceStartTest {
         assertEquals(Stage.CARD, status.stage());
         assertEquals(1, status.cardNo());
         assertEquals(2, status.exchangeNo());
+        assertEquals("논점 " + session.usedCardIds().get(0), status.topic());
         assertNull(status.score());
         assertEquals(4, status.speakings().size());
         assertNotNull(status.speakings().get(0).content());

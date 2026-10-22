@@ -11,6 +11,7 @@ import lombok.Getter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,6 +31,9 @@ public class TrialSession {
     private final CaseSnapshot snapshot;        // 재판 시작 때의 사건 복사본
     private final List<Integer> drawnCardIds;   // 시작 때 뽑은 카드 (2~3장, 뽑힌 순서)
 
+    // 재판 시작 때 한 번 만든 중립 논점. 복사본과 원본이 같은 불변 맵을 사용한다.
+    private final Map<Integer, String> topics;
+
     /* 아래 세 값은 발언 처리 스레드가 바꾸고 재판 상태 조회 스레드가 읽는다.
      *  volatile : 한 스레드가 바꾼 값을 다른 스레드가 바로 보게 한다.
      *  speakings 는 final 을 빼고, 반영할 때 목록을 통째로 바꿔 끼운다. (applyFrom)
@@ -48,6 +52,11 @@ public class TrialSession {
 
     public TrialSession(String trialId, int userId, int workCaseId, Side role, TrialMode mode,
                         CaseSnapshot snapshot, List<Integer> drawnCardIds) {
+        this(trialId, userId, workCaseId, role, mode, snapshot, drawnCardIds, Map.of());
+    }
+
+    public TrialSession(String trialId, int userId, int workCaseId, Side role, TrialMode mode,
+                        CaseSnapshot snapshot, List<Integer> drawnCardIds, Map<Integer, String> topics) {
 
         if (drawnCardIds.size() < TrialTurnOrder.BASE_CARD_COUNT
                 || drawnCardIds.size() > TrialTurnOrder.MAX_CARD_COUNT) {
@@ -61,6 +70,7 @@ public class TrialSession {
         this.mode = mode;
         this.snapshot = snapshot;
         this.drawnCardIds = List.copyOf(drawnCardIds);
+        this.topics = Map.copyOf(topics);
     }
 
     /* 실제로 공방에 쓰는 카드 (뽑은 카드 앞에서부터 cardCount 장) */
@@ -79,6 +89,12 @@ public class TrialSession {
             return null;
         }
         return TrialTurnOrder.turnAt(speakings.size() + 1, role, usedCardIds());
+    }
+
+    /* 공방에서만 현재 논점을 공개한다. 미래 카드의 논점은 응답에 넣지 않는다. */
+    public String currentTopic() {
+        TrialTurn turn = currentTurn();
+        return turn == null || turn.cardId() == null ? null : topics.get(turn.cardId());
     }
 
     /* 지금 차례의 발언 하나를 판정과 함께 기록하고 게이지를 움직인다
@@ -111,7 +127,7 @@ public class TrialSession {
      * */
     public TrialSession copy() {
 
-        TrialSession draft = new TrialSession(trialId, userId, workCaseId, role, mode, snapshot, drawnCardIds);
+        TrialSession draft = new TrialSession(trialId, userId, workCaseId, role, mode, snapshot, drawnCardIds, topics);
         draft.speakings = new ArrayList<>(speakings);
         draft.cardCount = cardCount;
         draft.score = score;

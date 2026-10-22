@@ -85,7 +85,7 @@ class OpenAiSpeakingAiTest {
         ArgumentCaptor<String> instructions = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> input = ArgumentCaptor.forClass(String.class);
         verify(openAiClient).streamText(instructions.capture(), input.capture(), anyInt(), any());
-        assertTrue(instructions.getValue().contains("검사 역할"));
+        assertTrue(instructions.getValue().contains("검사 역할을 맡는다"));
         assertTrue(input.getValue().contains("검사 카드 1"));
         assertTrue(!input.getValue().contains("변호인 카드"));
     }
@@ -103,6 +103,24 @@ class OpenAiSpeakingAiTest {
         assertTrue(input.getValue().contains("최종 게이지 50"));
         assertTrue(input.getValue().contains("무죄 1단계 · 무죄 1"));
         assertEquals("총평입니다.", summary);
+    }
+
+    @Test
+    @DisplayName("AI 변호인은 피의자·피해자·상대 역할과 현재 논점만 전달받는다")
+    void defenseIdentityAndTopic() {
+        TrialSession session = SpeakingAiFixture.session(Side.PROSECUTION);
+        SpeakingAiFixture.moveTo(session, 4);
+        String input = com.verdict.castcourt.domain.speaking.ai.prompt.SpeakingAiPrompt.opponentInput(session);
+        assertTrue(input.contains("내 역할 : 변호인"));
+        assertTrue(input.contains("상대 역할 : 검사"));
+        assertTrue(input.contains("피의자 : 피의자"));
+        assertTrue(input.contains("피해자 : 피해자"));
+        assertTrue(input.contains("[현재 논점]\n현장 존재 여부"));
+        org.junit.jupiter.api.Assertions.assertFalse(input.contains("행동의 의도"));
+        assertTrue(input.contains("[지금 카드] 검사 카드 1"));
+        String instructions = com.verdict.castcourt.domain.speaking.ai.prompt.SpeakingAiPrompt.opponentInstructions(Side.DEFENSE);
+        assertTrue(instructions.contains("변호인 역할을 맡는다"));
+        assertTrue(instructions.contains("아니다"));
     }
 
     private void givenJson(String json) {
