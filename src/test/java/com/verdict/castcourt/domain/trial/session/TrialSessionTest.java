@@ -76,7 +76,7 @@ class TrialSessionTest {
         playToEnd(session, Side.PROSECUTION);
 
         assertThrows(IllegalStateException.class,
-                () -> session.record("더", true, true, true, true, false, WEIGHT));
+                () -> session.record("더", true, true, true, true, WEIGHT));
     }
 
     @Test
@@ -84,33 +84,12 @@ class TrialSessionTest {
     void recordScore() {
         TrialSession session = newSession(Side.PROSECUTION, List.of(11, 22));
 
-        TrialSessionSpeaking first = session.record("검사 모두 진술", true, true, null, true, false, WEIGHT);
+        TrialSessionSpeaking first = session.record("검사 모두 진술", true, true, null, true, WEIGHT);
 
         assertEquals(1, first.seq());
         assertEquals(10, first.delta());
         assertEquals(60, first.scoreAfter());
         assertEquals(60, session.getScore());
-    }
-
-    @Test
-    @DisplayName("역할 이탈은 네 항목과 등급을 보존하고 정상 득점 대신 반대 방향 벌점을 기록한다")
-    void roleViolationRecordedForBothSpeakers() {
-        for (Side userRole : Side.values()) {
-            TrialSession session = newSession(userRole, List.of(11, 22));
-            TrialSessionSpeaking prosecutor = session.record("무죄 요청", true, true, null, true, true, 10);
-            assertEquals(Grade.STRONG, prosecutor.grade());
-            assertTrue(prosecutor.issue());
-            assertTrue(prosecutor.roleViolation());
-            assertEquals(-3, prosecutor.delta());
-            assertEquals(47, session.getScore());
-            TrialSession draft = session.copy();
-            TrialSessionSpeaking defender = draft.record("엄벌 요청", true, true, null, true, true, 10);
-            assertEquals(3, defender.delta());
-            session.applyFrom(draft);
-            assertEquals(50, session.getScore());
-            assertTrue(session.getSpeakings().getLast().roleViolation());
-            assertTrue(session.getSpeakings().getFirst().roleViolation());
-        }
     }
 
     private TrialSession newSession(Side role, List<Integer> cardIds) {
@@ -123,7 +102,7 @@ class TrialSessionTest {
             TrialTurn turn = session.currentTurn();
             boolean strong = turn.side() == winner;
             Boolean rebut = turn.seq() == 1 ? null : strong;
-            session.record("발언 " + turn.seq(), strong, strong, rebut, strong, false, WEIGHT);
+            session.record("발언 " + turn.seq(), strong, strong, rebut, strong, WEIGHT);
         }
     }
 }

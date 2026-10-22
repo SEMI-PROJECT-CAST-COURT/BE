@@ -75,7 +75,7 @@ final class SpeakingTestFixture {
     }
 
     static AiResult<JudgeResult> allYes(TrialSession session) {
-        return new AiResult<>(JudgeResult.of(session, true, true, true, true, false, 10), USAGE);
+        return new AiResult<>(JudgeResult.of(session, true, true, true, true, 10), USAGE);
     }
 
     /* 정해진 문장을 한 글자씩 넘기는 상대 */

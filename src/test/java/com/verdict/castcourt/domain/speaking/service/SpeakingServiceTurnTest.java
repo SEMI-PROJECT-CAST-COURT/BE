@@ -137,27 +137,6 @@ class SpeakingServiceTurnTest {
     }
 
     @Test
-    @DisplayName("사용자·AI 모두 판사의 역할 이탈 결과가 서비스·게이지·응답에 반영된다")
-    void roleViolationFlowsThroughService() {
-        SpeakingService roleJudge = SpeakingTestFixture.service(store,
-                SpeakingTestFixture.judge((session, content) -> new AiResult<>(JudgeResult.of(session, true, true, true, true,
-                        true, 10), SpeakingTestFixture.USAGE)), SpeakingTestFixture.fixedOpponent());
-        TrialSession session = SpeakingTestFixture.session(Side.PROSECUTION, TrialMode.CHICKEN);
-        SpeakingTestFixture.Recorder recorder = new SpeakingTestFixture.Recorder();
-
-        roleJudge.runTurn(session, "역할 이탈", recorder);
-
-        assertTrue(session.getSpeakings().getFirst().roleViolation());
-        assertTrue(session.getSpeakings().getLast().roleViolation());
-        assertEquals(-3, session.getSpeakings().getFirst().delta());
-        assertEquals(3, session.getSpeakings().getLast().delta());
-        assertEquals(50, session.getScore());
-        SpeakingJudgeEventDTO judge = (SpeakingJudgeEventDTO) recorder.events.getFirst().data();
-        assertEquals(true, judge.roleViolation());
-        assertEquals(-3, judge.delta());
-    }
-
-    @Test
     @DisplayName("겁쟁이 모드는 양측 모두 첫 공격 전 현재 카드만 받고 공방 전환 시 한 장씩 교체한다")
     void chickenCurrentCardBeforeAttack() {
         for (Side role : Side.values()) {
