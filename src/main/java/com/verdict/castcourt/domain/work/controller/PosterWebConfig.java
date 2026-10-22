@@ -13,7 +13,7 @@ public class PosterWebConfig implements WebMvcConfigurer {
     @org.springframework.context.annotation.Bean
     public jakarta.servlet.MultipartConfigElement multipartConfigElement() {
         return new jakarta.servlet.MultipartConfigElement(
-                "", 100L * 1024, 1024L * 1024, 0);
+                "", 500L * 1024, 1024L * 1024, 0);
     }
 
     @Override

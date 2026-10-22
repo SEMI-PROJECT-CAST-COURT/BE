@@ -41,7 +41,7 @@ class WorkCreateTest {
         assertEquals("POSTER_INVALID_FORMAT", assertThrows(BusinessException.class, () -> storage.save(
                 new MockMultipartFile("poster", "fake.png", "image/png", new byte[]{1,2,3}))).getErrorCode().getCode());
         assertEquals("POSTER_TOO_LARGE", assertThrows(BusinessException.class, () -> storage.save(
-                new MockMultipartFile("poster", "large.png", "image/png", new byte[100*1024+1]))).getErrorCode().getCode());
+                new MockMultipartFile("poster", "large.png", "image/png", new byte[500*1024+1]))).getErrorCode().getCode());
     }
 
     @Test void validatesSummaryAndCategoryBeforeSavingFile() {
