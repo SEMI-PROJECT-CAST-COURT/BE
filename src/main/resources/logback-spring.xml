@@ -67,9 +67,27 @@
         </encoder>
     </appender>
 
-    <!-- AI 사용량 : 전용 파일에도 남기고, additivity 기본값(true)이라 root 의 콘솔 · 전체 파일에도 남는다 -->
-    <logger name="com.verdict.castcourt.global.infra.log">
+    <!-- API 요청 (global/infra/log/api 의 ApiAccessLogFilter) 만 따로 · 호출량 급증 알림이 울렸을 때 누가 불렀는지 찾는 용도 -->
+    <appender name="API_ACCESS_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/api-access.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/api-access.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- AI 사용량 · API 요청 : 전용 파일에도 남기고, additivity 기본값(true)이라 root 의 콘솔 · 전체 파일에도 남는다 -->
+    <logger name="com.verdict.castcourt.global.infra.log.ai">
         <appender-ref ref="AI_USAGE_FILE"/>
+    </logger>
+    <logger name="com.verdict.castcourt.global.infra.log.api">
+        <appender-ref ref="API_ACCESS_FILE"/>
     </logger>
 
     <!-- SQL · 바인딩 값은 양이 많고 민감한 값이 섞여서 파일에는 남기지 않는다 (레벨은 application.yaml) -->
