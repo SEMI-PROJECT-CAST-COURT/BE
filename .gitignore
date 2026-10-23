@@ -44,3 +44,6 @@ uploads/
 
 ### mac에서 추가되는 .DS_Store ###
 .DS_Store
+
+### 프로메테우스 수집 데이터 (monitoring 에서 --storage.tsdb.path=data 로 실행) ###
+monitoring/data/

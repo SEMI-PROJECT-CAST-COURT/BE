@@ -29,6 +29,7 @@ import com.verdict.castcourt.domain.trial.session.TrialSessionStore;
 import com.verdict.castcourt.domain.trial.session.TrialTurnOrder;
 import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
+import com.verdict.castcourt.global.metrics.CastCourtMetrics;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Limit;
@@ -112,6 +113,7 @@ public class TrialService {
         }
 
         trialSessionStore.save(session);    // 같은 사용자의 이전 판은 덮어쓴다
+        CastCourtMetrics.recordTrialStarted(role, mode);
 
         return TrialStartResponseDTO.from(session);
     }
@@ -228,6 +230,7 @@ public class TrialService {
         int penaltyTier = ScoreRule.penaltyTier(session.getScore());
         String judgeSummary = summarize(session);
         TrialEntity trial = save(session, penaltyTier, judgeSummary);
+        CastCourtMetrics.recordVerdict(session.getRole(), session.getMode(), penaltyTier);
 
         trialSessionStore.remove(session);      // 저장이 끝난 판은 메모리에서 지운다 (이후 재판 상태 조회는 404)
 

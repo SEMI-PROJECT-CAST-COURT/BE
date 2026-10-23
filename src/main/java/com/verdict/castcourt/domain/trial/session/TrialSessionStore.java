@@ -50,6 +50,16 @@ public class TrialSessionStore {
                 .filter(session -> isAlive(session, now));
     }
 
+    /* 진행 중인 재판 수 (지표 castcourt_trial_active · CastCourtMetrics)
+     *  아직 정리되지 않은 버려진 판은 세지 않는다. 세기만 하고 지우지는 않는다.
+     * */
+    public long activeCount() {
+        Instant now = Instant.now();
+        return sessions.values().stream()
+                .filter(session -> !session.isIdle(now, IDLE_TIMEOUT))
+                .count();
+    }
+
     /* 이 판이 아직 보관 중일 때만 지운다 (그사이 새로 시작한 판은 지우지 않음) */
     public void remove(TrialSession session) {
         sessions.remove(session.getUserId(), session);

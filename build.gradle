@@ -59,6 +59,12 @@ dependencies {
     // Swagger
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
 
+    // Spring Boot Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Prometheus
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // mockito
