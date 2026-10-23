@@ -18,6 +18,7 @@ import com.verdict.castcourt.domain.trial.session.TrialSessionStore;
 import com.verdict.castcourt.domain.trial.session.TrialTurn;
 import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
+import com.verdict.castcourt.global.metrics.CastCourtMetrics;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
@@ -141,6 +142,7 @@ public class SpeakingService {
      * */
     void runTurn(TrialSession session, String content, BiConsumer<String, Object> sender) {
 
+        String outcome = CastCourtMetrics.SUCCESS;     // 지표용 턴 결과 (아래 catch 에서 바꾼다)
         try {
             TrialSession draft = session.copy();
             playTurn(draft, content, sender);
@@ -157,11 +159,13 @@ public class SpeakingService {
         } catch (ClientClosedException e) {
             // 브라우저가 먼저 끊었다 → 반영하지 않고(복사본을 버림) 실패로도 세지 않는다
             log.info("[SpeakingService] 브라우저 연결 끊김 : trialId={}", session.getTrialId());
+            outcome = CastCourtMetrics.CLIENT_CLOSED;
 
         } catch (RuntimeException e) {
             ErrorCode errorCode = e instanceof BusinessException businessException
                     ? businessException.getErrorCode()
                     : ErrorCode.INTERNAL_SERVER_ERROR;
+            outcome = errorCode.name();
             if (!(e instanceof BusinessException)) {
                 log.error("[SpeakingService] 턴 처리 중 예상하지 못한 오류", e);
             }
@@ -176,6 +180,7 @@ public class SpeakingService {
 
         } finally {
             session.endTurn();      // 위에서 못 풀고 끝난 경우를 위한 안전장치
+            CastCourtMetrics.recordSpeakingTurn(outcome);
         }
     }
 
