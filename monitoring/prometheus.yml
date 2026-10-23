@@ -51,7 +51,7 @@ scrape_configs:
           instance: '이규원'
       - targets: [ '192.168.0.47:8080' ]
         labels:
-          instance: '권다연'
+          instance: '권도연'
       - targets: [ '192.168.10.34:8080' ]
         labels:
           instance: '윤지성'
