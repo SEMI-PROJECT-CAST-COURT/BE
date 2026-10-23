@@ -44,3 +44,6 @@ uploads/
 
 ### mac에서 추가되는 .DS_Store ###
 .DS_Store
+
+### Logs ###
+logs/
