@@ -43,14 +43,14 @@
   ],
   "title": "Cast Court 모니터링",
   "uid": "cast-court-monitoring",
-  "description": "Cast Court API : 서버 상태 / 재판 / AI(OpenAI) / HTTP / 자원. 지표 설명은 CastCourtMetrics.java 와 monitoring/alert-rules.yml 참고",
+  "description": "Cast Court API : 서버 상태 / 재판 / AI(OpenAI) / AI 비용 / HTTP / 자원. 지표 설명은 CastCourtMetrics.java 와 monitoring/alert-rules.yml 참고",
   "tags": [
     "cast-court",
     "monitoring"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "10s",
   "time": {
     "from": "now-30m",
@@ -77,6 +77,63 @@
           "text": "All",
           "value": "$__all"
         }
+      },
+      {
+        "name": "price_input",
+        "label": "입력 단가 ($/1M 토큰)",
+        "description": "gpt-6-luna 입력 100만 토큰당 달러 (OpenAI 가격표 · 2026-10-23 확인). 모델을 바꾸면 함께 고친다",
+        "type": "textbox",
+        "hide": 0,
+        "query": "0.10",
+        "current": {
+          "text": "0.10",
+          "value": "0.10"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "0.10",
+            "value": "0.10"
+          }
+        ]
+      },
+      {
+        "name": "price_output",
+        "label": "출력 단가 ($/1M 토큰)",
+        "description": "gpt-6-luna 출력 100만 토큰당 달러 (OpenAI 가격표 · 2026-10-23 확인). 모델을 바꾸면 함께 고친다",
+        "type": "textbox",
+        "hide": 0,
+        "query": "0.50",
+        "current": {
+          "text": "0.50",
+          "value": "0.50"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "0.50",
+            "value": "0.50"
+          }
+        ]
+      },
+      {
+        "name": "usd_krw",
+        "label": "환율 (원/$)",
+        "description": "원화 환산용 환율 (2026-10-22 기준). 바뀌면 여기서 고친다",
+        "type": "textbox",
+        "hide": 0,
+        "query": "1326",
+        "current": {
+          "text": "1326",
+          "value": "1326"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "1326",
+            "value": "1326"
+          }
+        ]
       }
     ]
   },
@@ -1337,7 +1394,7 @@
     {
       "id": 19,
       "type": "row",
-      "title": "4. HTTP 트래픽과 응답 시간",
+      "title": "4. AI 비용 (추정)",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -1349,6 +1406,370 @@
     },
     {
       "id": 20,
+      "type": "stat",
+      "title": "AI 비용 (선택 기간 · 달러)",
+      "description": "토큰 수 × 단가 (대시보드 위쪽 변수 · 100만 토큰당 달러). 실제 청구 금액은 OpenAI 대시보드 Usage 가 기준이다. 캐시된 입력(단가 1/10)을 구분하지 않아 조금 크게, 실패한 호출의 토큰은 세지 않아 조금 작게 나올 수 있다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 41
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"input\"}[$__range])) * $price_input + sum(increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"output\"}[$__range])) * $price_output) / 1000000",
+          "legendFormat": "USD",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 4
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "AI 비용 (선택 기간 · 원)",
+      "description": "토큰 수 × 단가 (대시보드 위쪽 변수 · 100만 토큰당 달러). 실제 청구 금액은 OpenAI 대시보드 Usage 가 기준이다. 캐시된 입력(단가 1/10)을 구분하지 않아 조금 크게, 실패한 호출의 토큰은 세지 않아 조금 작게 나올 수 있다. 환율은 변수 usd_krw 를 쓴다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 41
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"input\"}[$__range])) * $price_input + sum(increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"output\"}[$__range])) * $price_output) / 1000000 * $usd_krw",
+          "legendFormat": "KRW",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyKRW",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "입력 토큰 (선택 기간)",
+      "description": "OpenAI 에 보낸 토큰 (지시문 + 사건 · 발언 내용). 단가는 변수 price_input.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 41
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"input\"}[$__range]))",
+          "legendFormat": "입력",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "출력 토큰 (선택 기간)",
+      "description": "OpenAI 가 만든 토큰 (판정 JSON · 상대 발언 · 총평 등). 단가는 변수 price_output (기본값 기준 입력의 5배).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 41
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"output\"}[$__range]))",
+          "legendFormat": "출력",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "AI 비용 추이 (용도별 · 5분간 · 달러)",
+      "description": "5분 동안 쓴 비용을 용도별로 그린다. 어떤 기능이 비용을 끌어올리는지 본다. 호출이 없던 용도는 숨긴다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by (purpose) (increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"input\"}[5m])) * $price_input + sum by (purpose) (increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"output\"}[5m])) * $price_output) / 1000000 > 0",
+          "legendFormat": "{{purpose}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "decimals": 4
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "bargauge",
+      "title": "용도별 비용 (선택 기간 · 달러)",
+      "description": "토큰 수 × 단가 (대시보드 위쪽 변수 · 100만 토큰당 달러). 실제 청구 금액은 OpenAI 대시보드 Usage 가 기준이다. 캐시된 입력(단가 1/10)을 구분하지 않아 조금 크게, 실패한 호출의 토큰은 세지 않아 조금 작게 나올 수 있다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by (purpose) (increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"input\"}[$__range])) * $price_input + sum by (purpose) (increase(castcourt_ai_tokens_total{job=\"cast-court\", instance=~\"$instance\", type=\"output\"}[$__range])) * $price_output) / 1000000 > 0",
+          "legendFormat": "{{purpose}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "range": true
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "min": 0,
+          "decimals": 4,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 26,
+      "type": "row",
+      "title": "5. HTTP 트래픽과 응답 시간",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      }
+    },
+    {
+      "id": 27,
       "type": "timeseries",
       "title": "요청 수 (주소별)",
       "description": "어떤 API 가 많이 불리는지. 프로메테우스 수집 요청(/actuator)은 뺀다.",
@@ -1360,7 +1781,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 41
+        "y": 55
       },
       "targets": [
         {
@@ -1404,7 +1825,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 28,
       "type": "timeseries",
       "title": "응답 상태별 요청 수",
       "description": "SUCCESS(2xx) · CLIENT_ERROR(4xx) · SERVER_ERROR(5xx). [주의!] 발언 제출(SSE)은 AI 가 실패해도 200 이라 SUCCESS 로 잡힌다.",
@@ -1416,7 +1837,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 55
       },
       "targets": [
         {
@@ -1518,7 +1939,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 29,
       "type": "timeseries",
       "title": "일반 API 응답 시간 (AI 경유 제외)",
       "description": "AI 를 부르지 않는 API 의 p50 · p95 · p99. 두 선이 벌어지면 일부 요청만 느리다는 뜻이다. 알림 '응답시간_악화'와 같은 기준이다.",
@@ -1530,7 +1951,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 49
+        "y": 63
       },
       "targets": [
         {
@@ -1594,7 +2015,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 30,
       "type": "timeseries",
       "title": "AI 경유 API 응답 시간 p95",
       "description": "재판 시작 · 발언 제출(SSE) · 판결 받기 · 작품 소개 초안. 발언 제출은 SSE 연결이 닫힐 때(한 턴이 끝날 때)까지라 AI 3번 호출 시간의 합이다.",
@@ -1606,7 +2027,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 63
       },
       "targets": [
         {
@@ -1650,20 +2071,20 @@
       }
     },
     {
-      "id": 24,
+      "id": 31,
       "type": "row",
-      "title": "5. 자원 사용",
+      "title": "6. 자원 사용",
       "collapsed": false,
       "panels": [],
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 71
       }
     },
     {
-      "id": 25,
+      "id": 32,
       "type": "timeseries",
       "title": "AI 작업 스레드 (applicationTaskExecutor)",
       "description": "발언 턴(SSE)과 관리자 초안(WebSocket)이 같이 쓰는 스레드 풀. 기본 스레드 8개를 넘으면 대기열에 줄을 선다 (알림 'AI작업_대기열').",
@@ -1675,7 +2096,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 58
+        "y": 72
       },
       "targets": [
         {
@@ -1779,7 +2200,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 33,
       "type": "timeseries",
       "title": "DB 커넥션 풀",
       "description": "active(사용 중) · idle(대기 중) · pending(커넥션을 못 받고 기다리는 스레드). AI 호출 중에는 커넥션을 잡지 않도록 TrialService 가 트랜잭션을 나눠 두었다.",
@@ -1791,7 +2212,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 58
+        "y": 72
       },
       "targets": [
         {
@@ -1876,7 +2297,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 34,
       "type": "timeseries",
       "title": "JVM 힙 메모리",
       "description": "톱니 모양이 정상이다. 쌓이다가 가비지 컬렉션이 돌면서 한 번에 내려간다. 진행 중 재판은 서버 메모리에 있으므로 '진행 중 재판'과 함께 본다.",
@@ -1888,7 +2309,7 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 58
+        "y": 72
       },
       "targets": [
         {
@@ -1942,7 +2363,7 @@
       }
     },
     {
-      "id": 28,
+      "id": 35,
       "type": "timeseries",
       "title": "로그 레벨별 발생률",
       "description": "초당 로그 수. application.yaml 에서 com.verdict.castcourt 를 DEBUG 로 두어 debug 가 많은 것은 정상이다.",
@@ -1954,7 +2375,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 58
+        "y": 72
       },
       "targets": [
         {
