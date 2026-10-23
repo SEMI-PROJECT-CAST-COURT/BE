@@ -32,9 +32,77 @@ spring:
       pageable:
         one-indexed-parameters: true
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /actuator
+
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+
+      group:
+        # GET /actuator/health/liveness로 호출
+        liveness:
+          include:
+            - ping
+        # GET /actuator/health/readiness로 호출
+        readiness:
+          include:
+            - db
+            - diskSpace
+
+    loggers:
+      # access 값의 의미
+      #   - none         : 이 엔드포인트를 아예 쓸 수 없다
+      #   - read-only    : 조회만 가능 (GET)
+      #   - unrestricted : 조회와 변경 모두 가능 (GET, POST)
+      access: unrestricted
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        "[http.server.requests]": true
+      # percentiles: 애플리케이션이 백분위수를 미리 계산해 값으로 내보낸다.
+      #  프로메테우스는 위의 히스토그램을 쓰기 때문에 이쪽은 사용하지 않지만,
+      #  히스토그램을 지원하지 않는 모니터링 도구로 바꿀 때를 대비해 함께 설정해둔다.
+      percentiles:
+        "[http.server.requests]": 0.5, 0.95, 0.99
+      slo:
+        "[http.server.requests]": 100ms, 200ms, 500ms, 1s
+      # 히스토그램 구간은 기본 30초까지라 그보다 긴 요청은 p95 가 30초에 붙어 버린다.
+      #  발언 제출(SSE)은 한 턴이 끝날 때까지(AI 3번)라 30초를 넘기도 해서 SSE 타임아웃 180초까지 늘린다.
+      maximum-expected-value:
+        "[http.server.requests]": 180s
+
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+  info:
+    env:
+      enabled: true # 아래 info.* 항목을 info 엔드포인트에 포함시킨다
+    java:
+      enabled: true
+    os:
+      enabled: true
+
+info:
+  app:
+    name: Cast Court API
+    description: 사용자는 검사나 변호인이 되어 AI 상대와 공방을 벌이고, AI 판사는 발언마다 판정한 뒤 최종 판결과 형량을 정한다.
+    version: 1.0.0
+
 # logging config
 logging:
   level:
+    com.verdict.castcourt: DEBUG
     # 실행되는 SQL 출력
     org.hibernate.SQL: debug
     # 바인딩되는 파라미터 출력

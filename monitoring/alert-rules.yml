@@ -1,0 +1,189 @@
+# =================================================================================================
+# Cast Court 프로메테우스 알림 규칙
+# -------------------------------------------------------------------------------------------------
+# 이 파일은 prometheus.yml 의 rule_files 에서 불러온다. (프로메테우스 화면 Alerts 탭에서 확인)
+# 실제 전송(메신저 · 메일)은 Alertmanager 나 그라파나 알림이 필요하다. 여기 PromQL 을 그대로 옮겨 쓰면 된다.
+# -------------------------------------------------------------------------------------------------
+# 조건식에 쓰인 지표가 나오는 곳
+#  up                                프로메테우스가 대상마다 자동으로 만든다
+#  castcourt_speaking_turns_total    SpeakingService.runTurn (발언 턴 결과)              ┐
+#  castcourt_ai_requests_seconds_*   OpenAiClient (모든 AI 호출 · 용도 purpose · 결과 outcome) ┘ CastCourtMetrics
+#  http_server_requests_seconds_*    스프링 부트 자동 (application.yaml percentiles-histogram 으로 _bucket 생성)
+#  logback_events_total              스프링 부트 자동 (로그 레벨별 발생 횟수)
+#  executor_queued_tasks             스프링 부트 자동 (applicationTaskExecutor 작업 스레드 풀)
+#  hikaricp_connections_pending      스프링 부트 자동 (DB 커넥션 풀)
+#  jvm_memory_*                      스프링 부트 자동
+# -------------------------------------------------------------------------------------------------
+# 이 프로젝트에서 알림을 짤 때 알아야 할 것
+#  1) 발언 제출은 SSE 라서 AI 가 실패해도 HTTP 상태가 200 이다. → 5xx 알림으로는 못 잡는다 (2-1 이 따로 있는 이유)
+#  2) 관리자 초안(사건 · 카드 · 형벌표)은 WebSocket 이라 HTTP 지표에 아예 없다. → AI 호출 지표로 본다 (2-3)
+#  3) AI 를 부르는 주소는 수 초 ~ 수십 초가 정상이다. → 응답 시간 알림에서 뺀다 (4-1)
+# =================================================================================================
+
+groups:
+
+  # 서버 생존 감시
+  - name: cast-court-availability
+    rules:
+
+      # 서버가 응답하지 않는 상태
+      - alert: 서버_응답없음
+        expr: up{job="cast-court"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} 서버가 응답하지 않습니다"
+          description: "1분 이상 지표 수집에 실패했습니다. IntelliJ 에서 앱이 실행 중인지, 8080 포트를 확인하세요."
+
+  # AI 감시 (이 프로젝트의 핵심)
+  - name: cast-court-ai
+    rules:
+
+      # 발언 처리 실패 (사용자가 겪는 증상)
+      # 발언 한 턴 = 판사 판정 → 상대 AI 발언(스트리밍) → 판사 판정. 하나라도 실패하면 error 이벤트로 끝난다.
+      # AI 응답 내용이 잘못된 경우(판정 JSON 필드 누락 → AI_JUDGE_FAILED)도 여기서 잡힌다.
+      # 브라우저가 먼저 끊은 턴(CLIENT_CLOSED)은 사용자가 떠난 것이라 실패로 보지 않는다.
+      # increase(...[10m]) 는 최근 10분 동안 늘어난 건수다. 한두 번은 다시 보내면 되므로 3건부터 알린다.
+      - alert: 발언처리_실패
+        expr: |
+          sum by (instance) (
+            increase(castcourt_speaking_turns_total{job="cast-court", outcome!~"SUCCESS|CLIENT_CLOSED"}[10m])
+          ) >= 3
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} 발언 처리가 연달아 실패하고 있습니다"
+          description: "최근 10분간 {{ printf \"%.0f\" $value }}건 실패했습니다. 대시보드 '발언 턴 결과'에서 실패 코드를, 콘솔에서 [OpenAiClient] 로그를 확인하세요."
+
+      # OpenAI 설정 오류
+      # API 키가 없거나(OPENAI_API_KEY) 틀려서 OpenAI 가 401 을 돌려준 경우다. 모든 AI 기능이 멈춘다.
+      # 저절로 낫지 않으므로 for 없이 바로 알린다.
+      - alert: AI_설정오류
+        expr: |
+          sum by (instance) (
+            increase(castcourt_ai_requests_seconds_count{job="cast-court", outcome="AI_CONFIGURATION_MISSING"}[5m])
+          ) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} OpenAI 설정 오류로 AI 호출이 실패합니다"
+          description: "IntelliJ 실행 설정의 환경 변수 OPENAI_API_KEY 가 있는지, 올바른 키인지 확인하세요."
+
+      # AI 호출 실패 (원인 · 용도별)
+      # 재판 시작(논점) · 판결(총평) · 관리자 초안까지 모든 AI 호출이 대상이다.
+      # AI_UPSTREAM_ERROR : OpenAI 오류 응답(429 한도 · 5xx), 연결 실패, 토큰 상한에서 잘린 응답
+      # AI_TIMEOUT        : 60초 안에 응답이 오지 않음
+      # CANCELLED(중단)는 사용자가 떠난 것이라 뺀다.
+      # "사용자가 겪는 증상"이라면 이것은 "원인"이다. 원인 알림은 심각도를 낮춰 둔다.
+      - alert: AI_호출실패
+        expr: |
+          sum by (instance, purpose, outcome) (
+            increase(castcourt_ai_requests_seconds_count{job="cast-court", outcome=~"AI_UPSTREAM_ERROR|AI_TIMEOUT|INTERNAL_SERVER_ERROR"}[10m])
+          ) >= 3
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI {{ $labels.purpose }} 호출이 {{ $labels.outcome }} 로 실패하고 있습니다"
+          description: "최근 10분간 {{ printf \"%.0f\" $value }}건. 429 면 OpenAI 사용 한도 · 잔액을, 타임아웃이면 OpenAI 상태를 확인하세요."
+
+  # 오류 감시
+  - name: cast-court-errors
+    rules:
+
+      # ERROR 로그 급증
+      # 이 앱에서 ERROR 로그는 예상하지 못한 예외에서만 찍힌다.
+      # ([UnhandledException] GlobalExceptionHandler · [WebSocket] 실패 · [SpeakingService] 예상하지 못한 오류)
+      # WebSocket 쪽 오류는 HTTP 지표에 없으므로 이 규칙이 거의 유일한 신호다.
+      - alert: 오류로그_급증
+        expr: sum by (instance) (increase(logback_events_total{job="cast-court", level="error"}[5m])) >= 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} ERROR 로그가 평소보다 많이 발생하고 있습니다"
+          description: "최근 5분간 {{ printf \"%.0f\" $value }}건. 콘솔에서 [UnhandledException] · [WebSocket] 실패 로그를 확인하세요."
+
+      # HTTP 5xx 응답
+      # 서버 잘못으로 실패한 요청이며 4xx(클라이언트 잘못)는 알림 대상이 아니다.
+      # 이 앱의 502 · 503 · 504 는 대부분 재판 시작 · 판결 받기 · 작품 소개 초안의 AI 실패다.
+      # [주의!] 상태 코드별 지표는 그 오류가 처음 날 때 생겨서 첫 1건은 증가로 잡히지 않는다.
+      #  그래서 같은 오류가 반복될 때 울린다. 한 번뿐인 오류는 대시보드 '응답 상태별 요청 수'에서 본다.
+      - alert: 서버오류_발생
+        expr: sum by (instance, uri, status) (rate(http_server_requests_seconds_count{job="cast-court", status=~"5.."}[5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} {{ $labels.uri }} 에서 {{ $labels.status }} 응답이 발생하고 있습니다"
+          description: "502 · 503 · 504 면 AI 호출 실패입니다. 대시보드 'AI 호출 실패'를 함께 보세요."
+
+  # 성능 · 자원 감시
+  - name: cast-court-performance
+    rules:
+
+      # 일반 API 응답 시간 악화 (p95 기준)
+      # histogram_quantile(0.95, ...) 는 느린 쪽 5% 가 겪는 시간이다. 평균은 소수의 문제를 다수의 정상값으로 덮는다.
+      # AI 를 부르는 주소는 빼고 본다. 수 초 ~ 수십 초가 정상이라 넣으면 재판할 때마다 울린다.
+      #  POST /api/trials                      재판 시작 (논점 AI + 변호인이면 AI 검사 모두 진술)
+      #  POST /api/trials/{trialId}/speakings  발언 제출 SSE (한 턴이 끝날 때까지 = AI 3번)
+      #  POST /api/trials/{trialId}/verdict    판결 받기 (판사 총평 AI)
+      #  POST /api/admin/works/summary-draft   작품 소개 초안 (AI)
+      #  /actuator 로 시작하는 주소(프로메테우스 수집 요청)도 뺀다.
+      - alert: 응답시간_악화
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, instance) (
+              rate(http_server_requests_seconds_bucket{job="cast-court", uri!~"/actuator.*|/api/trials|/api/trials/.+/(speakings|verdict)|/api/admin/works/summary-draft"}[5m])
+            )
+          ) > 1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} 일반 API 응답이 느려지고 있습니다"
+          description: "AI 를 부르지 않는 API 의 상위 5% 응답 시간이 1초를 넘었습니다. 슬로우 쿼리(콘솔의 SQL 로그)를 확인하세요."
+
+      # AI 작업 스레드 대기열
+      # 발언 턴(SSE)과 관리자 초안(WebSocket)은 같은 작업 스레드 풀 applicationTaskExecutor 에서 돈다.
+      #  스프링 부트 기본값은 스레드 8개 + 끝없는 대기열이라, 동시에 9명 이상 발언하면 9번째부터 줄을 선다.
+      #  대기가 계속되면 application.yaml 에서 spring.task.execution.pool.core-size 를 늘린다.
+      #  (spring.threads.virtual.enabled=true 로 가상 스레드를 쓰면 대기열이 없어지고 이 지표도 사라진다)
+      - alert: AI작업_대기열
+        expr: sum by (instance) (executor_queued_tasks{job="cast-court", name="applicationTaskExecutor"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} AI 작업이 스레드를 기다리고 있습니다"
+          description: "대기 중인 작업 {{ printf \"%.0f\" $value }}개. 발언 응답이 늦게 시작됩니다. 작업 스레드 수를 늘리는 것을 검토하세요."
+
+      # DB 커넥션 풀 고갈
+      # pending 은 커넥션을 받지 못해 기다리는 스레드 수이며, 0보다 크면 이미 포화 상태다.
+      #  TrialService 는 AI 를 부르는 동안 DB 커넥션을 붙잡지 않도록 @Transactional 을 일부러 빼 두었다.
+      #  이 알림이 울리면 AI 호출을 감싸는 트랜잭션이 새로 생기지 않았는지부터 본다.
+      - alert: DB커넥션풀_포화
+        expr: sum by (instance) (hikaricp_connections_pending{job="cast-court"}) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} DB 커넥션 대기가 발생하고 있습니다"
+          description: "커넥션을 기다리는 스레드가 있습니다. AI 호출을 감싼 트랜잭션, 슬로우 쿼리, 풀 크기(기본 10)를 확인하세요."
+
+      # JVM 힙 메모리 부족
+      # 자바는 메모리를 넉넉히 쓰다가 가비지 컬렉션으로 한 번에 정리하므로 90% 가 잠깐 찍히는 것은 정상이다.
+      #  그래서 for 를 10분으로 길게 잡아 높은 상태가 계속되는지를 본다.
+      #  진행 중 재판은 DB 가 아니라 서버 메모리(TrialSessionStore)에 있다. castcourt_trial_active 와 함께 본다.
+      - alert: 힙메모리_부족
+        expr: |
+          sum by (instance) (jvm_memory_used_bytes{job="cast-court", area="heap"})
+          / sum by (instance) (jvm_memory_max_bytes{job="cast-court", area="heap"}) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} 힙 메모리 사용률이 높습니다"
+          description: "10분 이상 90% 를 넘고 있습니다. 진행 중 재판 수와 함께 메모리 누수 가능성을 확인하세요."

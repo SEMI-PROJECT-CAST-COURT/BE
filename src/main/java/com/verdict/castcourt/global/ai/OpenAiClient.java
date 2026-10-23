@@ -2,6 +2,7 @@ package com.verdict.castcourt.global.ai;
 
 import com.verdict.castcourt.global.exception.BusinessException;
 import com.verdict.castcourt.global.exception.ErrorCode;
+import com.verdict.castcourt.global.metrics.CastCourtMetrics;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
 import java.net.http.HttpClient;
 import java.net.http.HttpTimeoutException;
@@ -83,9 +85,15 @@ public class OpenAiClient {
 
     /* 한 번에 받기 : schema 모양의 JSON 을 돌려준다
      *  strict = true 라 스키마에 없는 필드를 만들거나 필수 필드를 빼먹지 않는다.
+     *  schemaName(judge_result · trial_topics …)은 지표의 용도(purpose) 태그로도 쓴다.
      * */
     public AiResult<JsonNode> createJson(String instructions, String input, int maxOutputTokens,
                                          String schemaName, Map<String, Object> schema) {
+        return measure(schemaName, () -> requestJson(instructions, input, maxOutputTokens, schemaName, schema));
+    }
+
+    private AiResult<JsonNode> requestJson(String instructions, String input, int maxOutputTokens,
+                                           String schemaName, Map<String, Object> schema) {
 
         Map<String, Object> body = requestBody(instructions, input, maxOutputTokens);
         body.put("text", Map.of("format", Map.of(
@@ -126,6 +134,13 @@ public class OpenAiClient {
      * */
     public AiResult<String> streamText(String instructions, String input, int maxOutputTokens,
                                        Consumer<String> onDelta) {
+        // 스트리밍은 지금 상대 발언만 쓴다 → 용도 태그는 opponent_speech
+        return measure(CastCourtMetrics.PURPOSE_OPPONENT_SPEECH,
+                () -> requestStream(instructions, input, maxOutputTokens, onDelta));
+    }
+
+    private AiResult<String> requestStream(String instructions, String input, int maxOutputTokens,
+                                           Consumer<String> onDelta) {
 
         Map<String, Object> body = requestBody(instructions, input, maxOutputTokens);
         body.put("stream", true);
@@ -206,6 +221,33 @@ public class OpenAiClient {
                     || e.getCause() instanceof SocketTimeoutException;
             log.warn("[OpenAiClient] 연결 실패 : {}", e.getMessage());
             throw new BusinessException(timeout ? ErrorCode.AI_TIMEOUT : ErrorCode.AI_UPSTREAM_ERROR);
+        }
+    }
+
+    /* 지표 기록 (두 호출 공통) : 호출 한 번의 시간 · 결과 · 토큰을 CastCourtMetrics 에 남긴다
+     *  결과(outcome) : SUCCESS / BusinessException 의 코드(AI_UPSTREAM_ERROR · AI_TIMEOUT · AI_CONFIGURATION_MISSING)
+     *                  / CANCELLED(스트리밍 도중 브라우저 · WebSocket 이 끊겨 onDelta 가 멈춤) / 그 밖은 INTERNAL_SERVER_ERROR
+     *  예외는 바꾸지 않고 그대로 다시 던진다. 토큰은 성공한 호출만 센다.
+     * */
+    private <T> AiResult<T> measure(String purpose, Supplier<AiResult<T>> request) {
+
+        long start = System.nanoTime();
+        String outcome = ErrorCode.INTERNAL_SERVER_ERROR.name();    // 아래에서 성공 · 알려진 실패로 바꾼다
+        try {
+            AiResult<T> result = request.get();
+            outcome = CastCourtMetrics.SUCCESS;
+            if (result.usage() != null) {
+                CastCourtMetrics.recordAiTokens(purpose, result.usage().inputTokens(), result.usage().outputTokens());
+            }
+            return result;
+        } catch (BusinessException e) {
+            outcome = e.getErrorCode().name();
+            throw e;
+        } catch (UncheckedIOException e) {
+            outcome = CastCourtMetrics.CANCELLED;
+            throw e;
+        } finally {
+            CastCourtMetrics.recordAiRequest(purpose, outcome, System.nanoTime() - start);
         }
     }
 

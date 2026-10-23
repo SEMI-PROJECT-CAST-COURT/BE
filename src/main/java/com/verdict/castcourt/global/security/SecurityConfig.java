@@ -1,6 +1,7 @@
 package com.verdict.castcourt.global.security;
 
 import jakarta.servlet.DispatcherType;
+import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -42,7 +43,8 @@ public class SecurityConfig {
                 auth.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                     .requestMatchers("/error").permitAll()
                     .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                    .requestMatchers("/actuator/health").permitAll()
+                    .requestMatchers(EndpointRequest.to("health", "info", "prometheus")).permitAll()
+                    .requestMatchers(EndpointRequest.toAnyEndpoint()).hasAnyAuthority("SUPER_ADMIN", "ADMIN")
                     .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                     // account
                     .requestMatchers(HttpMethod.POST, "/login").permitAll()
