@@ -1,3 +1,130 @@
 spring:
   application:
     name: cast-court
+
+  # Database 연결 설정
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: ${DB_DRIVER}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  # JPA 설정
+  jpa:
+    generate-ddl: false          # 엔티티 바탕으로 테이블 자동 생성, 수정 등 하는 기능 끄기
+    database: mysql              # 사용 데이터 베이스 mysql
+    properties:
+      hibernate:
+        format_sql: true         # sql문을 들여쓰기 줄바꿈 등을하여 볼 수 있게
+        highlight_sql: true      # sql문에 색상을 넣어 표시
+        use_sql_comments: true   # 생성한 SQL에 어떤 작업에서 나온 SQL인지 파악하는 데 도움이 되는 주석 추가
+
+  # jackson config
+  # JSON에 없거나 null인 값을 int 같은 기본형에 넣을 때 오류 대신 0으로 처리한다.
+  jackson:
+    deserialization:
+      fail-on-null-for-primitives: false
+
+  # paging config
+  # 요청의 page 파라미터를 1부터 세는 값으로 해석한다.
+  data:
+    web:
+      pageable:
+        one-indexed-parameters: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /actuator
+
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+
+      group:
+        # GET /actuator/health/liveness로 호출
+        liveness:
+          include:
+            - ping
+        # GET /actuator/health/readiness로 호출
+        readiness:
+          include:
+            - db
+            - diskSpace
+
+    loggers:
+      # access 값의 의미
+      #   - none         : 이 엔드포인트를 아예 쓸 수 없다
+      #   - read-only    : 조회만 가능 (GET)
+      #   - unrestricted : 조회와 변경 모두 가능 (GET, POST)
+      access: unrestricted
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        "[http.server.requests]": true
+      # percentiles: 애플리케이션이 백분위수를 미리 계산해 값으로 내보낸다.
+      #  프로메테우스는 위의 히스토그램을 쓰기 때문에 이쪽은 사용하지 않지만,
+      #  히스토그램을 지원하지 않는 모니터링 도구로 바꿀 때를 대비해 함께 설정해둔다.
+      percentiles:
+        "[http.server.requests]": 0.5, 0.95, 0.99
+      slo:
+        "[http.server.requests]": 100ms, 200ms, 500ms, 1s
+      # 히스토그램 구간은 기본 30초까지라 그보다 긴 요청은 p95 가 30초에 붙어 버린다.
+      #  발언 제출(SSE)은 한 턴이 끝날 때까지(AI 3번)라 30초를 넘기도 해서 SSE 타임아웃 180초까지 늘린다.
+      maximum-expected-value:
+        "[http.server.requests]": 180s
+
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+  info:
+    env:
+      enabled: true # 아래 info.* 항목을 info 엔드포인트에 포함시킨다
+    java:
+      enabled: true
+    os:
+      enabled: true
+
+info:
+  app:
+    name: Cast Court API
+    description: 사용자는 검사나 변호인이 되어 AI 상대와 공방을 벌이고, AI 판사는 발언마다 판정한 뒤 최종 판결과 형량을 정한다.
+    version: 1.0.0
+
+# logging config
+logging:
+  level:
+    com.verdict.castcourt: DEBUG
+    # 실행되는 SQL 출력
+    org.hibernate.SQL: debug
+    # 바인딩되는 파라미터 출력
+    org.hibernate.orm.jdbc.bind: trace
+
+# server config
+server:
+  port: 8080
+
+# springdoc config
+springdoc:
+  swagger-ui:
+    # API를 컨트롤러 순서가 아닌 태그(도메인) 이름순으로 정렬한다.
+    tags-sorter: alpha
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: 3600000
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  base-url: https://api.openai.com/v1
+  model: gpt-6-luna
+  max-output-tokens: 1000
+  reasoning-effort: none
