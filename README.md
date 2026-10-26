@@ -3,6 +3,75 @@
 작품 속 인물의 선택을 재판하는 AI 법정 게임의 API 서버.
 사용자는 검사나 변호인이 되어 AI 상대와 공방을 벌이고, AI 판사는 발언마다 판정한 뒤 최종 판결과 형량을 정한다.
 
+## 시연
+
+### 사용자
+
+<details>
+<summary><b>로그인 · 작품 탐색</b> — 카테고리 · 정렬 · 검색으로 작품을 찾고, 작품 상세에서 사건을 고른다.</summary>
+
+![로그인 · 작품 탐색](docs/demo/01-login-browse.gif)
+
+</details>
+
+<details>
+<summary><b>재판 준비</b> — 역할(검사 / 변호인)과 모드를 고른 뒤 재판을 시작한다.</summary>
+
+![재판 준비](docs/demo/02-trial-setup.gif)
+
+</details>
+
+<details>
+<summary><b>재판 진행</b> — 내 발언을 판사 AI가 판정하고, 상대 AI가 실시간(SSE)으로 반론한다. 판정 등급에 따라 판사 게이지가 움직인다.</summary>
+
+![재판 진행](docs/demo/03-trial-speaking.gif)
+
+</details>
+
+<details>
+<summary><b>판결 · 재판 기록</b> — 최후 변론이 끝나면 최종 게이지로 형벌 단계가 정해지고, 발언별 판정 기록을 다시 볼 수 있다.</summary>
+
+![판결 · 재판 기록](docs/demo/04-verdict-record.gif)
+
+</details>
+
+<details>
+<summary><b>내 재판 기록</b> — 지금까지의 재판 수 · 결과 통계 · 재판 목록.</summary>
+
+![내 재판 기록](docs/demo/05-my-records.gif)
+
+</details>
+
+### 관리자
+
+<details>
+<summary><b>카테고리 관리</b> — 작품 카테고리를 추가하고 편집한다.</summary>
+
+![카테고리 관리](docs/demo/06-admin-category.gif)
+
+</details>
+
+<details>
+<summary><b>작품 등록</b> — 포스터를 업로드하고, AI 작품 소개 초안을 받아 등록한다.</summary>
+
+![작품 등록](docs/demo/07-admin-work.gif)
+
+</details>
+
+<details>
+<summary><b>사건 등록 · AI 초안</b> — WebSocket으로 쟁점 후보, 사건 개요 · 경과 다시 쓰기, 근거 카드 · 형벌표 초안을 받아 사건을 만든다.</summary>
+
+![사건 등록 · AI 초안](docs/demo/08-admin-case-ai.gif)
+
+</details>
+
+<details>
+<summary><b>관리자 계정 관리</b> (<code>SUPER_ADMIN</code>) — 관리자 계정을 만들고 비활성화한다. 비활성화된 계정은 로그인할 수 없다.</summary>
+
+![관리자 계정 관리](docs/demo/09-superadmin.gif)
+
+</details>
+
 ## 기술 스택
 
 | 구분 | 사용 |
